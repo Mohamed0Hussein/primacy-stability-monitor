@@ -12,24 +12,28 @@
     "electron": "electron ."
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.17",
-    "firebase": "^12.6.0",
-    "lucide-react": "^0.555.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "tailwindcss": "^4.1.17"
+    "@tailwindcss/vite": "4.1.17",
+    "@tanstack/react-query": "5.90.12",
+    "axios": "1.13.2",
+    "firebase": "12.6.0",
+    "lucide-react": "0.555.0",
+    "react": "18.2.0",
+    "react-datepicker": "^9.0.0",
+    "react-dom": "18.2.0",
+    "react-router": "7.9.6",
+    "tailwindcss": "4.1.17"
   },
   "devDependencies": {
-    "@types/react": "^18.2.37",
-    "@types/react-dom": "^18.2.15",
-    "@typescript-eslint/eslint-plugin": "^6.10.0",
-    "@typescript-eslint/parser": "^6.10.0",
-    "@vitejs/plugin-react": "^4.2.0",
-    "electron": "^39.2.4",
-    "eslint": "^8.53.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.4",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.0"
+    "@types/react": "18.2.37",
+    "@types/react-dom": "18.2.15",
+    "@typescript-eslint/eslint-plugin": "6.10.0",
+    "@typescript-eslint/parser": "6.10.0",
+    "@vitejs/plugin-react": "4.2.0",
+    "electron": "39.2.4",
+    "eslint": "8.53.0",
+    "eslint-plugin-react-hooks": "4.6.0",
+    "eslint-plugin-react-refresh": "0.4.4",
+    "typescript": "5.2.2",
+    "vite": "^5.4.21"
   }
 }

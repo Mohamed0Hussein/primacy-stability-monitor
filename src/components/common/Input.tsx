@@ -1,12 +1,12 @@
 // src/components/common/Input.tsx
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
-  icon?: 'mail' | 'lock' | 'user';
+  icon?: 'mail' | 'lock' | 'user' | 'phone';
   fullWidth?: boolean;
 }
 
@@ -27,6 +27,7 @@ export const Input: React.FC<InputProps> = ({
     mail: Mail,
     lock: Lock,
     user: User,
+    phone: Phone
   }[icon || 'mail'];
 
   return (

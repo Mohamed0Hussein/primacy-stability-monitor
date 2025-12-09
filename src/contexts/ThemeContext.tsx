@@ -21,7 +21,6 @@ export default function ThemeProvider({ children }: ThemeProviderProps) {
     return prefersDark ? 'dark' : 'light';
   });
 
-  console.log(themeName)
   useEffect(() => {
     localStorage.setItem('theme', themeName);
     document.documentElement.className = themeName;
@@ -29,7 +28,6 @@ export default function ThemeProvider({ children }: ThemeProviderProps) {
 
   const toggleTheme = () => {
     setThemeName(prev => prev === 'light' ? 'dark' : 'light');
-    console.log('toggleTheme', themeName);
   };
 
   const setTheme = (name : ThemeName) => {
