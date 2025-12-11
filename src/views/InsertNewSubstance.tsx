@@ -1,16 +1,61 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FlaskConical, Package, Calendar } from 'lucide-react'
-
+import moment, { Moment } from 'moment'
 import { Card } from '../components/common/Card'
 import { Input } from '../components/common/Input'
 import { Button } from '../components/common/Button'
 import { DatePickerInput } from '../components/common/DatePickerInput'
 import { useTheme } from '../hooks/useTheme'
 import { Theme } from '../themes/themes'
+import Pick from '../components/common/PickInput'
 
 const steps = ['Basic Info', 'Batch', 'Dates']
 
 type Errors = Partial<Record<string, string>>
+
+
+const packTypes = [
+  [
+    "PVC/Clear",
+    "PVC/PVDC",
+    "PVC/Aclar",
+    "PVC/PE/PVDC",
+    "ALU/ALU",
+    "Glass bottle clear",
+  ],
+  [
+    "PVC/Clear - white",
+    "PVC/PVDC - white",
+    "PVC/Aclar - white",
+    "PVC/PE/PVDC - white",
+    "ALU/ALU - white",
+    "Glass bottle clear - white",
+  ],
+  [
+    "Amber glass bottle",
+    "Glass ampule clear",
+    "Glass ampule amber",
+  ]
+]
+
+const dosageForm = [
+  "Immediate release tablet",
+  "Extended release tablet",
+  "Hard gelatin capsule",
+  "Enteric coated tablet",
+  "Fast melting tablet",
+  "Syrup",
+  "Oral solution",
+  "Suspension",
+  "Emultion",
+  "Injection",
+  "Cream",
+  "Ointment",
+  "Gel",
+  "Dry syrup",
+  "Poweder",
+  "Soft geltin capsule",
+]
 
 const InsertNewSubstance = () => {
   const { theme } = useTheme()
@@ -31,7 +76,10 @@ const InsertNewSubstance = () => {
     manufacturingDate: null as Date | null,
     stabilityMonths: '',
     expiryDate: null as Date | null,
+    datesOf30Condition: [] as { label: string; date: Moment; }[],
+    datesOf40Condition: [] as { label: string; date: Moment; }[],
   })
+
 
   /* ✅ Auto expiry */
   useEffect(() => {
@@ -75,7 +123,24 @@ const InsertNewSubstance = () => {
   
   const submit = () => {
     if (!validateStep()) return
-    console.log(data)
+    const datesOf30Cond = [
+      moment().set('month',moment().month() + 3).startOf('day'),
+      moment().set('month',moment().month() + 6).startOf('day'),
+      moment().set('month',moment().month() + 9).startOf('day'),
+      moment().set('month',moment().month() + 12).startOf('day'),
+      moment().set('month',moment().month() + 18).startOf('day'),
+      moment().set('month',moment().month() + 24).startOf('day'),
+    ]
+
+    const datesOf40Cond = [
+      moment().set('month',moment().month() + 1).startOf('day'),
+      moment().set('month',moment().month() + 2).startOf('day'),
+      moment().set('month',moment().month() + 3).startOf('day'),
+      moment().set('month',moment().month() + 6).startOf('day'),
+    ]
+    data.datesOf30Condition = datesOf30Cond.map(date => ({label : `${moment(date).diff(moment(),'month') + 1} Months`, date}))
+    data.datesOf40Condition = datesOf40Cond.map(date => ({label : `${moment(date).diff(moment(),'month') + 1} Month${moment(date).diff(moment(),'month') === 0 ? '' : 's'}`, date}))
+
   }
   
 
@@ -127,10 +192,11 @@ const InsertNewSubstance = () => {
                     />
                   </Field>
                   <Field label="Dosage form" error={errors.dosageForm} theme={theme}>
-                    <Input
+                    <Pick
+                    options={dosageForm.map(dosage => ({label: dosage, value: dosage}))}
                       value={data.dosageForm}
                       onChange={e =>
-                        setData(d => ({ ...d, dosageForm: e.target.value }))
+                        setData(d => ({ ...d, dosageForm: Array.isArray(e) ? e[0] : e }))
                       }
                     />
                   </Field>
@@ -143,10 +209,11 @@ const InsertNewSubstance = () => {
                     />
                   </Field>
                   <Field label="Pack type" error={errors.packType} theme={theme}>
-                    <Input
+                    <Pick
+                    options={packTypes.map(arrayOfTypes => arrayOfTypes.map(type => ({label : type, value : type})))}
                       value={data.packType}
                       onChange={e =>
-                        setData(d => ({ ...d, packType: e.target.value }))
+                        setData(d => ({ ...d, packType: Array.isArray(e) ? e[0] : e }))
                       }
                     />
                   </Field>
@@ -187,7 +254,7 @@ const InsertNewSubstance = () => {
                     />
                   </Field>
                   <Field
-                    label="API batch numbers"
+                    label="Raw material batch numbers (API)"
                     error={errors.apiBatchNumbers}
                     theme={theme}
                   >
