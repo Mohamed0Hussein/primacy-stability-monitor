@@ -6,6 +6,7 @@ interface AuthContextType {
   accessToken: string | null;
   setAccessToken: (t: string | null) => void;
   loading: boolean;
+  logout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

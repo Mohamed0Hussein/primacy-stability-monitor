@@ -22,8 +22,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  const logout = async () => {
+    await auth.signOut();
+    setUser(null);
+    setAccessToken(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, setUser, accessToken, setAccessToken, loading }}>
+    <AuthContext.Provider value={{ user, setUser, accessToken, setAccessToken, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );
