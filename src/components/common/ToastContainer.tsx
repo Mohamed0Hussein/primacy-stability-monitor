@@ -19,7 +19,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   onRemoveToast,
 }) => {
   return (
-    <div className="fixed left-0 bottom-0 z-[9999] p-4 space-y-3">
+    <div className="fixed right-0 bottom-0 z-[9999] p-4 space-y-3">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

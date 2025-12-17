@@ -1,18 +1,30 @@
 // src/components/auth/AuthContainer.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router';
 
 import { useTheme } from '../hooks/useTheme';
-// import { useToast } from '../hooks/useToast';
+import { useToast } from '../hooks/useToast';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { ThemeToggle } from '../components/common/ThemeToggle';
 import { loginUser, registerUser } from '../utils/auth';
+import { useAuth } from '../contexts/auth-context';
+import ROUTE_PATHS from '../constants/route_paths';
 
 export default function Login() {
   const { theme } = useTheme();
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate(ROUTE_PATHS.INSERT_SUBSTANCE);
+    }
+  }, [user, loading, navigate]);
+
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -23,9 +35,9 @@ export default function Login() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { mutate: login } = useMutation({ mutationFn:() => loginUser(formData.email, formData.password) })
-  const { mutate: signup } = useMutation({ mutationFn:() => registerUser(formData.fullName, formData.email, formData.password, formData.phone) })
-  // const { error : displayError } = useToast()
+  const { mutateAsync: login } = useMutation({ mutationFn:() => loginUser(formData.email, formData.password) })
+  const { mutateAsync: signup } = useMutation({ mutationFn:() => registerUser(formData.fullName, formData.email, formData.password, formData.phone) })
+  const { error : displayError } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,21 +46,21 @@ export default function Login() {
     try {
   
       if (isLogin) {
-        login()
+        await login()
   
   
       } else {
         if (formData.password !== formData.confirmPassword) {
-          alert("Passwords do not match");
+          displayError("Passwords do not match");
           setIsLoading(false);
           return;
         }
   
-        signup() 
+        await signup() 
       }
     } catch (error ) {
       console.error(error);
-      alert("Authentication failed");
+      displayError("Authentication failed");
     }
   
     setIsLoading(false);

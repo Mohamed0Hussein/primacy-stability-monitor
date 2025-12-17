@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState, Activity } from 'react'
 import { FlaskConical, Package, Calendar } from 'lucide-react'
 import moment, { Moment } from 'moment'
 import { Card } from '../components/common/Card'
@@ -8,6 +8,7 @@ import { DatePickerInput } from '../components/common/DatePickerInput'
 import { useTheme } from '../hooks/useTheme'
 import { Theme } from '../themes/themes'
 import Pick from '../components/common/PickInput'
+import { conditionDetails, conditions } from '../constants/stability_conditions'
 
 const steps = ['Basic Info', 'Batch', 'Dates']
 
@@ -57,6 +58,18 @@ const dosageForm = [
   "Soft geltin capsule",
 ]
 
+const expiryDateOptions = [
+  { label : "2 Years" , value : 2},
+  { label : "3 Years" , value : 3},
+]
+
+const conditionsOptions = [
+  { label : conditionDetails[5], value : conditions[5]},
+  { label : conditionDetails[25], value : conditions[25]},
+  { label : conditionDetails[30], value : conditions[30]},
+  { label : conditionDetails[40], value : conditions[40]},
+] 
+
 const InsertNewSubstance = () => {
   const { theme } = useTheme()
   const [step, setStep] = useState(0)
@@ -67,6 +80,8 @@ const InsertNewSubstance = () => {
     dosageForm: '',
     strength: '',
     packType: '',
+    condition: '',
+    customConditionDate: null as Date | null,
 
     batchNumber: '',
     batchType: '',
@@ -74,21 +89,11 @@ const InsertNewSubstance = () => {
     apiBatchNumbers: '',
 
     manufacturingDate: null as Date | null,
-    stabilityMonths: '',
-    expiryDate: null as Date | null,
-    datesOf30Condition: [] as { label: string; date: Moment; }[],
-    datesOf40Condition: [] as { label: string; date: Moment; }[],
+    stabilityDate: null as Date | null,
+    expiryDate: "" as string | string[],
+
+    testsDates: [] as Moment[]
   })
-
-
-  /* ✅ Auto expiry */
-  useEffect(() => {
-    if (data.manufacturingDate && data.stabilityMonths) {
-      const expiry = new Date(data.manufacturingDate)
-      expiry.setMonth(expiry.getMonth() + Number(data.stabilityMonths))
-      setData(d => ({ ...d, expiryDate: expiry }))
-    }
-  }, [data.manufacturingDate, data.stabilityMonths])
 
   const validateStep = () => {
     const e: Errors = {}
@@ -98,6 +103,8 @@ const InsertNewSubstance = () => {
       if (!data.dosageForm) e.dosageForm = 'Required'
       if (!data.strength) e.strength = 'Required'
       if (!data.packType) e.packType = 'Required'
+      if (!data.condition) e.condition = 'Required'
+      if (!data.customConditionDate && data.condition === conditions[5]) e.customConditionDate = 'Required'
     }
 
     if (step === 1) {
@@ -109,7 +116,7 @@ const InsertNewSubstance = () => {
 
     if (step === 2) {
       if (!data.manufacturingDate) e.manufacturingDate = 'Required'
-      if (!data.stabilityMonths) e.stabilityMonths = 'Required'
+      if (!data.stabilityDate) e.stabilityDate = 'Required'
     }
 
     setErrors(e)
@@ -123,24 +130,20 @@ const InsertNewSubstance = () => {
   
   const submit = () => {
     if (!validateStep()) return
-    const datesOf30Cond = [
-      moment().set('month',moment().month() + 3).startOf('day'),
-      moment().set('month',moment().month() + 6).startOf('day'),
-      moment().set('month',moment().month() + 9).startOf('day'),
-      moment().set('month',moment().month() + 12).startOf('day'),
-      moment().set('month',moment().month() + 18).startOf('day'),
-      moment().set('month',moment().month() + 24).startOf('day'),
+
+    const testsDates = [
+      moment(data.manufacturingDate).add('months',3).startOf('day'),
+      moment(data.manufacturingDate).add('months',6).startOf('day'),
+      moment(data.manufacturingDate).add('months',9).startOf('day'),
+      moment(data.manufacturingDate).add('months',12).startOf('day'),
+      moment(data.manufacturingDate).add('months',18).startOf('day'),
+      moment(data.manufacturingDate).add('months',24).startOf('day'),
+      moment(data.manufacturingDate).add('months',36).startOf('day'),
     ]
 
-    const datesOf40Cond = [
-      moment().set('month',moment().month() + 1).startOf('day'),
-      moment().set('month',moment().month() + 2).startOf('day'),
-      moment().set('month',moment().month() + 3).startOf('day'),
-      moment().set('month',moment().month() + 6).startOf('day'),
-    ]
-    data.datesOf30Condition = datesOf30Cond.map(date => ({label : `${moment(date).diff(moment(),'month') + 1} Months`, date}))
-    data.datesOf40Condition = datesOf40Cond.map(date => ({label : `${moment(date).diff(moment(),'month') + 1} Month${moment(date).diff(moment(),'month') === 0 ? '' : 's'}`, date}))
-
+    data.testsDates = data.condition === conditions[5] ? [moment(data.manufacturingDate).startOf('day')] : testsDates
+    
+    console.log(data) // TODO : SEND TO DATABASE
   }
   
 
@@ -217,6 +220,26 @@ const InsertNewSubstance = () => {
                       }
                     />
                   </Field>
+                  <Field label="Condition" error={errors.condition} theme={theme}>
+                    <Pick
+                    options={conditionsOptions}
+                      value={data.condition}
+                      onChange={e => 
+                        setData(d => ({ ...d,customConditionDate : e === conditions[5] ? null : d.customConditionDate, condition: Array.isArray(e) ? e[0] : e }))
+                    }
+                    />
+                  </Field>
+                  <Activity mode={data.condition === conditions[5] ? "visible" : "hidden"}>
+                    <Field label="Condition test date" error={errors.customConditionDate} theme={theme}>
+                      <DatePickerInput
+                        label=''
+                        value={data.customConditionDate}
+                        onChange={e =>
+                          setData(d => ({ ...d, customConditionDate: Array.isArray(e) ? e[0] : e }))
+                        }
+                      />
+                    </Field>
+                  </Activity>
                 </Grid>
               </Section>
             )}
@@ -295,28 +318,37 @@ const InsertNewSubstance = () => {
                   </Field>
 
                   <Field
-                    label="Stability (months)"
-                    error={errors.stabilityMonths}
+                    label="Stability"
+                    error={errors.stability}
                     theme={theme}
                   >
-                    <Input
-                      type="number"
-                      value={data.stabilityMonths}
+                    <DatePickerInput
+                      label=''
+                      value={data.stabilityDate}
                       onChange={e =>
                         setData(d => ({
                           ...d,
-                          stabilityMonths: e.target.value,
+                          stabilityDate: e,
                         }))
                       }
                     />
                   </Field>
-
-                  <DatePickerInput
-                    label="Expiry date (auto)"
-                    value={data.expiryDate}
-                    onChange={() => {}}
-                    disabled
-                  />
+                  <Field 
+                    label='Expiry Date'
+                    error={errors.stability}
+                    theme={theme}
+                  >
+                    <Pick
+                      options={expiryDateOptions.map(op => ({label: op.label, value: op.value}))}
+                      value={data.expiryDate}
+                      onChange={e =>
+                        setData(d => ({
+                          ...d,
+                          expiryDate: Array.isArray(e) ? e[0] : e,
+                        }))
+                      }
+                    />
+                  </Field>
                 </Grid>
               </Section>
             )}

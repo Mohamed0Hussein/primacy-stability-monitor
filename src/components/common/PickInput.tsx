@@ -4,7 +4,7 @@ import { useTheme } from '../../hooks/useTheme'
 
 type Option = {
   label: string
-  value: string
+  value: any
 }
 
 type PickProps = {
