@@ -16,15 +16,17 @@ function App() {
   return (
     <AppProviders>
       <Router>
-        <Routes>
-          <Route path="/" element={<Navigate to={ROUTE_PATHS.LOGIN} replace />} />
-          <Route path={ROUTE_PATHS.LOGIN} element={<Login/>}/>
-          <Route path={ROUTE_PATHS.INSERT_SUBSTANCE} element={
-            <ProtectedRoute>
-              <InsertNewSubstance/>
-            </ProtectedRoute>
-          }/>
-        </Routes>
+        <AppLayout>
+          <Routes>
+            <Route path={ROUTE_PATHS.HOME} element={<Navigate to={ROUTE_PATHS.LOGIN} replace />} />
+            <Route path={ROUTE_PATHS.LOGIN} element={<Login/>}/>
+            <Route path={ROUTE_PATHS.INSERT_SUBSTANCE} element={
+              <ProtectedRoute>
+                <InsertNewSubstance/>
+              </ProtectedRoute>
+            }/>
+          </Routes>
+        </AppLayout>
       </Router>
     </AppProviders>
       
@@ -40,9 +42,7 @@ function AppProviders({children} : { children : React.ReactNode}){
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <AppLayout>
             {children}
-          </AppLayout>
           <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
         </AuthProvider>
       </QueryClientProvider>

@@ -141,7 +141,7 @@ const InsertNewSubstance = () => {
       moment(data.manufacturingDate).add('months',36).startOf('day'),
     ]
 
-    data.testsDates = data.condition === conditions[5] ? [moment(data.manufacturingDate).startOf('day')] : testsDates
+    data.testsDates = data.condition === conditions[5] ? [moment(data.customConditionDate).startOf('day')] : testsDates
     
     console.log(data) // TODO : SEND TO DATABASE
   }

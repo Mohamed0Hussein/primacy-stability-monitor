@@ -9,7 +9,6 @@ import { useToast } from '../hooks/useToast';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { ThemeToggle } from '../components/common/ThemeToggle';
 import { loginUser, registerUser } from '../utils/auth';
 import { useAuth } from '../contexts/auth-context';
 import ROUTE_PATHS from '../constants/route_paths';
@@ -75,10 +74,9 @@ export default function Login() {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center p-6 transition-colors duration-300"
+      className="min-h-full mx-auto items-center justify-center p-16 transition-colors duration-300"
       style={{ backgroundColor: theme.colors.background }}
     >
-      <ThemeToggle variant="default" />
 
       <div className="w-full max-w-md animate-fade-in">
         <Card className="relative overflow-hidden">
@@ -228,7 +226,7 @@ export default function Login() {
                     phone: '',
                   })
                 }}
-                className="font-semibold hover:underline"
+                className="font-semibold hover:underline cursor-pointer"
                 style={{ color: theme.colors.primary }}
               >
                 {isLogin ? 'Sign Up' : 'Sign In'}
