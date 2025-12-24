@@ -1,4 +1,4 @@
-// src/contexts/ToastContext.tsx
+// src/contexts/ToastProvider.tsx
 import React, { useState, useCallback, ReactNode } from 'react';
 import { ToastContainer, ToastMessage } from '../components/common/ToastContainer';
 import { ToastType } from '../components/common/Toast';

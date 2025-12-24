@@ -152,13 +152,13 @@ const InsertNewSubstance = () => {
     if (!validateStep()) return
 
     const testsDates = [
-      moment(data.manufacturingDate).add('months',3).startOf('day'),
-      moment(data.manufacturingDate).add('months',6).startOf('day'),
-      moment(data.manufacturingDate).add('months',9).startOf('day'),
-      moment(data.manufacturingDate).add('months',12).startOf('day'),
-      moment(data.manufacturingDate).add('months',18).startOf('day'),
-      moment(data.manufacturingDate).add('months',24).startOf('day'),
-      moment(data.manufacturingDate).add('months',36).startOf('day'),
+      moment(data.manufacturingDate).add(3,'months').startOf('day'),
+      moment(data.manufacturingDate).add(6,'months').startOf('day'),
+      moment(data.manufacturingDate).add(9,'months').startOf('day'),
+      moment(data.manufacturingDate).add(12,'months').startOf('day'),
+      moment(data.manufacturingDate).add(18,'months').startOf('day'),
+      moment(data.manufacturingDate).add(24,'months').startOf('day'),
+      moment(data.manufacturingDate).add(36,'months').startOf('day'),
     ]
 
     data.testsDates = data.condition === conditions[5] ? [moment(data.customConditionDate).startOf('day')] : testsDates

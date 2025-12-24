@@ -2,7 +2,7 @@
 import React from 'react';
 import { useTheme } from '../../hooks/useTheme';
 
-interface CardProps {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   padding?: 'sm' | 'md' | 'lg';

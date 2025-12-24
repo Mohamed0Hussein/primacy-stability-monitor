@@ -1,11 +1,12 @@
 import React from 'react';
 import ThemeProvider from './contexts/ThemeContext';
 import Login from './views/Login';
-import { ToastProvider } from './contexts/ToastContext';
+import { ToastProvider } from './contexts/ToastProvider';
 import { QueryClientProvider,QueryClient } from "@tanstack/react-query"
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router'
 import ROUTE_PATHS from './constants/route_paths';
 import InsertNewSubstance from './views/InsertNewSubstance';
+import Dashboard from './views/Dashboard';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './contexts/AuthProvider';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -19,6 +20,11 @@ function App() {
           <Routes>
             <Route path={ROUTE_PATHS.HOME} element={<Navigate to={ROUTE_PATHS.LOGIN} replace />} />
             <Route path={ROUTE_PATHS.LOGIN} element={<Login/>}/>
+            <Route path={ROUTE_PATHS.DASHBOARD} element={
+              <ProtectedRoute>
+                <Dashboard/>
+              </ProtectedRoute>
+            }/>
             <Route path={ROUTE_PATHS.INSERT_SUBSTANCE} element={
               <ProtectedRoute>
                 <InsertNewSubstance/>

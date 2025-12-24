@@ -1,11 +1,8 @@
 import { StatusBar } from '../components/common/StatusBar'
-import { ToastContainer } from '../components/common/ToastContainer'
 import { useTheme } from '../hooks/useTheme'
-import { useToast } from '../hooks/useToast'
 
 export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { theme } = useTheme()
-  const { toasts, removeToast } = useToast()
 
   return (
     <div 
@@ -19,7 +16,6 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
       <main className="flex-1 flex flex-col relative">
         {children}
       </main>
-      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </div>
   )
 }

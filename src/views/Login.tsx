@@ -20,7 +20,7 @@ export default function Login() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate(ROUTE_PATHS.INSERT_SUBSTANCE);
+      navigate(ROUTE_PATHS.DASHBOARD);
     }
   }, [user, loading, navigate]);
 

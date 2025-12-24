@@ -1,16 +1,17 @@
 import React from 'react';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, ArrowLeft, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../../contexts/auth-context';
 import { useTheme } from '../../hooks/useTheme';
 import { Button } from './Button';
 import { ThemeToggle } from './ThemeToggle';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import ROUTE_PATHS from '../../constants/route_paths';
 
 export const StatusBar: React.FC = () => {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     try {
@@ -30,8 +31,28 @@ export const StatusBar: React.FC = () => {
       }}
     >
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(-1)}
+          disabled={location.pathname === ROUTE_PATHS.LOGIN}
+          aria-label="Go back"
+        >
+          <ArrowLeft size={16} style={{ color: theme.colors.text }} />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(ROUTE_PATHS.DASHBOARD)}
+          aria-label="Go to Dashboard"
+        >
+          <LayoutDashboard size={16} style={{ color: theme.colors.text }} />
+          <span style={{ color: theme.colors.text }}>Prime</span>
+        </Button>
+
         <h1 
-          className="text-lg font-bold"
+          className="text-lg font-bold ml-2"
           style={{ color: theme.colors.text }}
         >
           Primacy Stability Monitor
