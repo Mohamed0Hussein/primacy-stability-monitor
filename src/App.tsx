@@ -18,7 +18,7 @@ function App() {
       <Router>
         <AppLayout>
           <Routes>
-            <Route path="/" element={<Navigate to={ROUTE_PATHS.LOGIN} replace />} />
+            <Route path={ROUTE_PATHS.HOME} element={<Navigate to={ROUTE_PATHS.LOGIN} replace />} />
             <Route path={ROUTE_PATHS.LOGIN} element={<Login/>}/>
             <Route path={ROUTE_PATHS.INSERT_SUBSTANCE} element={
               <ProtectedRoute>
