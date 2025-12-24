@@ -1,6 +1,9 @@
 import { useState, Activity } from 'react'
 import { FlaskConical, Package, Calendar } from 'lucide-react'
 import moment, { Moment } from 'moment'
+import { useMutation } from '@tanstack/react-query'
+
+import { useToast } from '../hooks/useToast'
 import { Card } from '../components/common/Card'
 import { Input } from '../components/common/Input'
 import { Button } from '../components/common/Button'
@@ -9,6 +12,8 @@ import { useTheme } from '../hooks/useTheme'
 import { Theme } from '../themes/themes'
 import Pick from '../components/common/PickInput'
 import { conditionDetails, conditions } from '../constants/stability_conditions'
+import { insertSubstance } from '../utils/api/substances'
+import { queryKeys } from '../constants/query_keys'
 
 const steps = ['Basic Info', 'Batch', 'Dates']
 
@@ -74,6 +79,7 @@ const InsertNewSubstance = () => {
   const { theme } = useTheme()
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState<Errors>({})
+  const { success, error,info,warning } = useToast()
 
   const [data, setData] = useState({
     productName: '',
@@ -93,6 +99,20 @@ const InsertNewSubstance = () => {
     expiryDate: "" as string | string[],
 
     testsDates: [] as Moment[]
+  })
+
+
+  const { mutateAsync : insertSubstanceMutation ,isPending : isInsertSubstancePending, isError : isInsertSubstanceError} = useMutation({
+    mutationFn : insertSubstance,
+    mutationKey : [queryKeys.insert_substance, data],
+    onSuccess : () => {
+      success('Substance inserted successfully')
+    },
+    onError : () => {
+      error('Failed to insert substance')
+    },
+    retry : 1,
+    retryDelay : 1000
   })
 
   const validateStep = () => {
@@ -143,7 +163,7 @@ const InsertNewSubstance = () => {
 
     data.testsDates = data.condition === conditions[5] ? [moment(data.customConditionDate).startOf('day')] : testsDates
     
-    console.log(data) // TODO : SEND TO DATABASE
+    insertSubstanceMutation(data)
   }
   
 

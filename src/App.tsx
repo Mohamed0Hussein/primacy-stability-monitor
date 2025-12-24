@@ -1,8 +1,7 @@
 import React from 'react';
 import ThemeProvider from './contexts/ThemeContext';
 import Login from './views/Login';
-import { useToast } from './hooks/useToast';
-import { ToastContainer } from './components/common/ToastContainer';
+import { ToastProvider } from './contexts/ToastContext';
 import { QueryClientProvider,QueryClient } from "@tanstack/react-query"
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router'
 import ROUTE_PATHS from './constants/route_paths';
@@ -35,16 +34,16 @@ function App() {
 
 
 function AppProviders({children} : { children : React.ReactNode}){
-  const { toasts, removeToast } = useToast();
   const queryClient = new QueryClient()
 
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-            {children}
-          <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+              {children}
+          </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     </ThemeProvider>
   )

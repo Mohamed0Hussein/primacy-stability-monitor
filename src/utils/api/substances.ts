@@ -1,6 +1,6 @@
 import axios from "../axios"
 
-export const insertSubstance = (substance: any) => {
+export const insertSubstance = (substance: object) => {
     return axios.post("/substances", substance)
 }
 

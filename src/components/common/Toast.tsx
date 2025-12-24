@@ -1,7 +1,7 @@
 // src/components/common/Toast.tsx
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
-import { CheckCircle, XCircle, AlertCircle, X, Info } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -56,27 +56,19 @@ export const Toast: React.FC<ToastProps> = ({
   const typeConfig = {
     success: {
       icon: <CheckCircle className="w-5 h-5" />,
-      bgColor: theme.colors.success,
-      textColor: '#ffffff',
-      iconColor: '#ffffff',
+      color: theme.colors.success,
     },
     error: {
       icon: <XCircle className="w-5 h-5" />,
-      bgColor: theme.colors.error,
-      textColor: '#ffffff',
-      iconColor: '#ffffff',
+      color: theme.colors.error,
     },
     warning: {
       icon: <AlertCircle className="w-5 h-5" />,
-      bgColor: theme.colors.warning,
-      textColor: '#000000',
-      iconColor: '#000000',
+      color: theme.colors.warning,
     },
     info: {
       icon: <Info className="w-5 h-5" />,
-      bgColor: theme.colors.primary,
-      textColor: '#ffffff',
-      iconColor: '#ffffff',
+      color: theme.colors.primary,
     },
   };
 
@@ -85,33 +77,39 @@ export const Toast: React.FC<ToastProps> = ({
   return (
     <div
       className={`
-        fixed left-4 bottom-4 z-[9999] 
+        relative overflow-hidden
         flex items-start gap-3 p-4 rounded-lg shadow-lg min-w-[300px] max-w-[400px]
-        transform transition-all duration-300 ease-out
-        ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
+        transform transition-all duration-300 ease-out border-l-4
+        ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}
       `}
       style={{
-        backgroundColor: config.bgColor,
-        color: config.textColor,
-        boxShadow: `0 10px 25px -5px ${theme.colors.overlay}30`,
+        backgroundColor: theme.colors.surface,
+        color: theme.colors.text,
+        borderLeftColor: config.color,
+        borderTop: `1px solid ${theme.colors.border}`,
+        borderRight: `1px solid ${theme.colors.border}`,
+        borderBottom: `1px solid ${theme.colors.border}`,
+        boxShadow: `0 4px 12px ${theme.colors.overlay}20`,
       }}
     >
       {/* Progress Bar */}
       <div 
-        className="absolute top-0 left-0 right-0 h-1 rounded-t-lg overflow-hidden"
-        style={{ backgroundColor: `${config.textColor}30` }}
+        className="absolute bottom-0 left-0 right-0 h-1"
+        style={{ 
+          backgroundColor: `${config.color}20` 
+        }}
       >
         <div 
           className="h-full transition-all duration-50 ease-linear"
           style={{ 
             width: `${progress}%`,
-            backgroundColor: config.textColor 
+            backgroundColor: config.color 
           }}
         />
       </div>
 
       {/* Icon */}
-      <div className="flex-shrink-0 pt-0.5" style={{ color: config.iconColor }}>
+      <div className="shrink-0 pt-0.5" style={{ color: config.color }}>
         {config.icon}
       </div>
 
@@ -123,8 +121,9 @@ export const Toast: React.FC<ToastProps> = ({
       {/* Close Button */}
       <button
         onClick={handleClose}
-        className="absolute top-2 right-2 p-1 rounded-full hover:bg-white/20 transition-colors duration-200"
+        className="absolute top-2 right-2 p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors duration-200"
         aria-label="Close toast"
+        style={{ color: theme.colors.textSecondary }}
       >
         <X className="w-4 h-4" />
       </button>
