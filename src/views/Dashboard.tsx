@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import moment from 'moment';
-import { Plus, Calendar, FlaskConical, ArrowRight } from 'lucide-react';
+import { Calendar, FlaskConical, ArrowRight } from 'lucide-react';
 
 import { useTheme } from '../hooks/useTheme';
 import { Button } from '../components/common/Button';
