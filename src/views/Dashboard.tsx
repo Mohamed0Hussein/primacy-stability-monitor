@@ -37,6 +37,7 @@ export default function Dashboard() {
     },
   });
 
+  console.log(substances);
   const sortedSubstances = useMemo(() => {
     if (!Array.isArray(substances)) return [];
 
