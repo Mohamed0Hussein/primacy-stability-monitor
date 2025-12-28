@@ -5,7 +5,7 @@ import { ToastProvider } from './contexts/ToastProvider';
 import { QueryClientProvider,QueryClient } from "@tanstack/react-query"
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router'
 import ROUTE_PATHS from './constants/route_paths';
-import InsertNewSubstance from './views/InsertNewSubstance';
+import InsertNewProduct from './views/InsertNewProduct';
 import Dashboard from './views/Dashboard';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './contexts/AuthProvider';
@@ -25,9 +25,9 @@ function App() {
                 <Dashboard/>
               </ProtectedRoute>
             }/>
-            <Route path={ROUTE_PATHS.INSERT_SUBSTANCE} element={
+            <Route path={ROUTE_PATHS.INSERT_PRODUCT} element={
               <ProtectedRoute>
-                <InsertNewSubstance/>
+                <InsertNewProduct/>
               </ProtectedRoute>
             }/>
           </Routes>

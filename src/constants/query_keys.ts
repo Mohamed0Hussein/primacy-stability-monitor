@@ -1,5 +1,5 @@
 export const queryKeys = {
-    get_substances: 'get_substances',
-    insert_substance: 'insert_substance'
+    get_products: 'get_products',
+    insert_product: 'insert_product'
     
 }

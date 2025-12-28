@@ -8,7 +8,7 @@ import { Calendar, FlaskConical, ArrowRight } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
-import { getSubstances } from '../utils/api/substances';
+import { getProducts } from '../utils/api/products';
 import { queryKeys } from '../constants/query_keys';
 import ROUTE_PATHS from '../constants/route_paths';
 
@@ -17,11 +17,12 @@ interface ValidationData {
     date: string;
 }
 
-interface Substance {
+interface Product {
   _id: string;
   productName: string;
   batchNumber: string;
-  testsDates: string[];
+  testsDates?: string[];
+  tests?: { condition: string, date: string }[];
   validations?: Record<string, ValidationData>;
 }
 
@@ -29,31 +30,50 @@ export default function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
 
-  const { data: substances = [], isLoading } = useQuery({
-    queryKey: [queryKeys.insert_substance], // Using generic key for substances list for now
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: [queryKeys.get_products], // Using generic key for substances list for now
     queryFn: async () => {
-        const response = await getSubstances();
+        const response = await getProducts();
         return response.data;
     },
   });
 
-  console.log(substances);
-  const sortedSubstances = useMemo(() => {
-    if (!Array.isArray(substances)) return [];
+  console.log(products);
+  const sortedProducts = useMemo(() => {
+    if (!Array.isArray(products)) return [];
 
     const now = moment().startOf('day');
 
-    return [...substances].map((sub: Substance) => { // Added type hint
-        // finding the next upcoming date from testsDates
-        const upcomingDate = sub.testsDates
-            .map((d: string) => moment(d))
-            .filter((m: moment.Moment) => m.isSameOrAfter(now))
-            .sort((a: moment.Moment, b: moment.Moment) => a.diff(b))[0];
+    return [...products].map((sub: Product) => { // Added type hint
+        let upcomingDate: moment.Moment | undefined;
+        let upcomingCondition: string | undefined;
+
+        if (sub.tests && Array.isArray(sub.tests) && sub.tests.length > 0) {
+             const upcomingTest = sub.tests
+                .map(t => ({ ...t, m: moment(t.date) }))
+                .filter(t => t.m.isSameOrAfter(now))
+                .sort((a, b) => a.m.diff(b.m))[0];
+             
+             if (upcomingTest) {
+                upcomingDate = upcomingTest.m;
+                upcomingCondition = upcomingTest.condition;
+             }
+        } else if (sub.testsDates && Array.isArray(sub.testsDates)) {
+             upcomingDate = sub.testsDates
+                .map((d: string) => moment(d))
+                .filter((m: moment.Moment) => m.isSameOrAfter(now))
+                .sort((a: moment.Moment, b: moment.Moment) => a.diff(b))[0];
+        } else {
+            // Fallback for generic 'testsDates' if it was possibly just strings in 'tests' (very unlikely)
+        }
         
+        const dateStr = upcomingDate ? upcomingDate.format('MMM DD, YYYY') : 'No upcoming tests';
+        const displayStr = upcomingCondition ? `${dateStr} (${upcomingCondition})` : dateStr;
+
         return {
             ...sub,
             nextTestDate: upcomingDate,
-            formattedNextDate: upcomingDate ? upcomingDate.format('MMM DD, YYYY') : 'No upcoming tests'
+            formattedNextDate: displayStr
         };
     }).sort((a, b) => {
         if (!a.nextTestDate && !b.nextTestDate) return 0;
@@ -61,7 +81,7 @@ export default function Dashboard() {
         if (!b.nextTestDate) return -1;
         return a.nextTestDate.diff(b.nextTestDate);
     });
-  }, [substances]);
+  }, [products]);
 
   const getStatusColor = (date: moment.Moment | undefined) => {
     if (!date) return theme.colors.textSecondary;
@@ -93,14 +113,14 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card 
                 className="p-6 cursor-pointer hover:shadow-lg transition-all group"
-                onClick={() => navigate(ROUTE_PATHS.INSERT_SUBSTANCE)}
+                onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}
             >
                 <div className="flex items-center gap-4">
                     <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500">
                         <FlaskConical size={24} />
                     </div>
                     <div className="flex-1">
-                        <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>Insert Substance</h3>
+                        <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>Insert Product</h3>
                         <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Register a new product batch</p>
                     </div>
                     <ArrowRight className="text-gray-300 group-hover:text-indigo-500 transition-colors" />
@@ -115,7 +135,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                         <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>Upcoming Tests</h3>
                          <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
-                            {sortedSubstances.filter(s => s.nextTestDate && s.nextTestDate.diff(moment(), 'days') <= 7).length} tests due this week
+                            {sortedProducts.filter(s => s.nextTestDate && s.nextTestDate.diff(moment(), 'days') <= 7).length} tests due this week
                          </p>
                     </div>
                 </div>
@@ -131,14 +151,14 @@ export default function Dashboard() {
             <div className="space-y-4">
                 {isLoading ? (
                     <div className="text-center py-12" style={{ color: theme.colors.textSecondary }}>Loading...</div>
-                ) : sortedSubstances.length === 0 ? (
+                ) : sortedProducts.length === 0 ? (
                     <Card className="p-8 text-center flex flex-col items-center justify-center gap-3">
                         <FlaskConical size={48} className="text-gray-300 dark:text-gray-600" />
                         <p style={{ color: theme.colors.textSecondary }}>No upcoming tests found.</p>
-                        <Button variant="ghost" onClick={() => navigate(ROUTE_PATHS.INSERT_SUBSTANCE)}>Get Started</Button>
+                        <Button variant="ghost" onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}>Get Started</Button>
                     </Card>
                 ) : (
-                    sortedSubstances.map((sub) => (
+                    sortedProducts.map((sub) => (
                         <Card key={sub._id} className="p-4 hover:shadow-md transition-shadow">
                             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                                 <div className="flex items-start gap-4">

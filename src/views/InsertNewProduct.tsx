@@ -1,4 +1,4 @@
-import { useState, Activity } from 'react'
+import { useState } from 'react'
 import { FlaskConical, Package, Calendar, ClipboardList, Plus, Trash2 } from 'lucide-react'
 import moment, { Moment } from 'moment'
 import { useMutation } from '@tanstack/react-query'
@@ -11,8 +11,8 @@ import { DatePickerInput } from '../components/common/DatePickerInput'
 import { useTheme } from '../hooks/useTheme'
 import { Theme } from '../themes/themes'
 import Pick from '../components/common/PickInput'
-import { conditionDetails, conditions } from '../constants/stability_conditions'
-import { insertSubstance } from '../utils/api/substances'
+import { conditionDetails } from '../constants/stability_conditions'
+import { insertProduct } from '../utils/api/products'
 import { queryKeys } from '../constants/query_keys'
 
 const steps = ['Basic Info', 'Batch', 'Dates', 'Specifications']
@@ -21,8 +21,7 @@ type Errors = Partial<Record<string, string>>
 
 interface Specification {
   id: string
-  name: string
-  result: string
+  testName: string
   isNumerical: boolean
   min?: string
   max?: string
@@ -71,19 +70,17 @@ const dosageForm = [
   "Soft geltin capsule",
 ]
 
-const expiryDateOptions = [
-  { label : "2 Years" , value : 2},
-  { label : "3 Years" , value : 3},
-]
+const baseTemperatures = [5, 25, 30, 40] as const
+const conditionTypes = ['Accelerated', 'Long-term'] as const
 
-const conditionsOptions = [
-  { label : conditionDetails[5], value : conditions[5]},
-  { label : conditionDetails[25], value : conditions[25]},
-  { label : conditionDetails[30], value : conditions[30]},
-  { label : conditionDetails[40], value : conditions[40]},
-] 
+const conditionsOptions = baseTemperatures.flatMap(temp => 
+  conditionTypes.map(type => ({
+    label: `${conditionDetails[temp]} - ${type}`,
+    value: `${temp}-${type}`
+  }))
+)
 
-const InsertNewSubstance = () => {
+const InsertNewProduct = () => {
   const { theme } = useTheme()
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState<Errors>({})
@@ -94,8 +91,7 @@ const InsertNewSubstance = () => {
     dosageForm: '',
     strength: '',
     packType: '',
-    condition: '',
-    customConditionDate: null as Date | null,
+    conditions: [] as string[], // Changed to array
 
     batchNumber: '',
     batchType: '',
@@ -106,28 +102,27 @@ const InsertNewSubstance = () => {
     stabilityDate: null as Date | null,
     expiryDate: null as Date | null,
 
-    testsDates: [] as Moment[],
+    tests: [] as { condition: string, date: Moment }[],
     specifications: [] as Specification[]
   })
 
   // State for the new specification form
   const [newSpec, setNewSpec] = useState<Partial<Specification>>({
-    name: '',
-    result: '',
+    testName: '',
     isNumerical: false,
     min: '',
     max: ''
   })
 
 
-  const { mutateAsync : insertSubstanceMutation } = useMutation({
-    mutationFn : insertSubstance,
-    mutationKey : [queryKeys.insert_substance, data],
+  const { mutateAsync : insertProductMutation } = useMutation({
+    mutationFn : insertProduct,
+    mutationKey : [queryKeys.insert_product, data],
     onSuccess : () => {
-      success('Substance inserted successfully')
+      success('Product inserted successfully')
     },
     onError : () => {
-      error('Failed to insert substance')
+      error('Failed to insert product')
     },
     retry : 1,
     retryDelay : 1000
@@ -141,8 +136,7 @@ const InsertNewSubstance = () => {
       if (!data.dosageForm) e.dosageForm = 'Required'
       if (!data.strength) e.strength = 'Required'
       if (!data.packType) e.packType = 'Required'
-      if (!data.condition) e.condition = 'Required'
-      if (!data.customConditionDate && data.condition === conditions[5]) e.customConditionDate = 'Required'
+      if (data.conditions.length === 0) e.conditions = 'Required'
     }
 
     if (step === 1) {
@@ -170,34 +164,44 @@ const InsertNewSubstance = () => {
   const submit = () => {
     if (!validateStep()) return
 
-    const testsDates = [
-      moment().add(3,'months').startOf('day'),
-      moment().add(6,'months').startOf('day'),
-      moment().add(9,'months').startOf('day'),
-      moment().add(12,'months').startOf('day'),
-      moment().add(18,'months').startOf('day'),
-      moment().add(24,'months').startOf('day'),
-      moment().add(36,'months').startOf('day'),
-    ]
+    const selectedConditions = data.conditions;
+    const tests: { condition: string; date: Moment }[] = [];
 
-    const cond40TestsDates = [
-      moment().add(1,'months').startOf('day'),
-      moment().add(3,'months').startOf('day'),
-      moment().add(6,'months').startOf('day'),
-    ]
+    selectedConditions.forEach(condition => {
+      let datesForCondition: Moment[] = [];
+      
+      if (condition.includes('Accelerated')) {
+         // 1, 3, 6 months
+         datesForCondition = [
+            moment().add(1, 'months').startOf('day'),
+            moment().add(3, 'months').startOf('day'),
+            moment().add(6, 'months').startOf('day')
+         ];
+      } else if (condition.includes('Long-term')) {
+         // 3, 6, 9, 12, 18, 24, 36 months
+         datesForCondition = [
+            moment().add(3, 'months').startOf('day'),
+            moment().add(6, 'months').startOf('day'),
+            moment().add(9, 'months').startOf('day'),
+            moment().add(12, 'months').startOf('day'),
+            moment().add(18, 'months').startOf('day'),
+            moment().add(24, 'months').startOf('day'),
+            moment().add(36, 'months').startOf('day')
+         ];
+      }
+      
+      datesForCondition.forEach(d => {
+        tests.push({ condition, date: d });
+      });
+    });
 
-    switch(data.condition){
-      case conditions[5]:
-        data.testsDates = [moment(data.customConditionDate).startOf('day')]
-        break;
-      case conditions[40]:
-        data.testsDates = cond40TestsDates
-        break;
-      default:
-        data.testsDates = testsDates
-    }
+    // Sort tests by date
+    tests.sort((a, b) => a.date.diff(b.date));
+
+    data.tests = tests;
     
-    insertSubstanceMutation(data)
+    console.log(data)
+    // insertProductMutation(data)
   }
   
 
@@ -274,26 +278,18 @@ const InsertNewSubstance = () => {
                       }
                     />
                   </Field>
-                  <Field label="Condition" error={errors.condition} theme={theme}>
+                  <Field label="Conditions" error={errors.conditions} theme={theme}>
                     <Pick
-                    options={conditionsOptions}
-                      value={data.condition}
-                      onChange={e => 
-                        setData(d => ({ ...d,customConditionDate : e === conditions[5] ? null : d.customConditionDate, condition: Array.isArray(e) ? e[0] : e }))
-                    }
+                      options={conditionsOptions}
+                      value={data.conditions}
+                      multiple={true}
+                      placeholder="Select conditions..."
+                      onChange={e => {
+                          const val = Array.isArray(e) ? e : [e];
+                          setData(d => ({ ...d, conditions: val }))
+                      }}
                     />
                   </Field>
-                  <Activity mode={data.condition === conditions[5] ? "visible" : "hidden"}>
-                    <Field label="Condition test date" error={errors.customConditionDate} theme={theme}>
-                      <DatePickerInput
-                        label=''
-                        value={data.customConditionDate}
-                        onChange={e =>
-                          setData(d => ({ ...d, customConditionDate: Array.isArray(e) ? e[0] : e }))
-                        }
-                      />
-                    </Field>
-                  </Activity>
                 </Grid>
               </Section>
             )}
@@ -373,7 +369,7 @@ const InsertNewSubstance = () => {
 
                   <Field
                     label="Stability start date"
-                    error={errors.stability}
+                    error={errors.stabilityDate}
                     theme={theme}
                   >
                     <DatePickerInput
@@ -389,7 +385,7 @@ const InsertNewSubstance = () => {
                   </Field>
                   <Field 
                     label='Expiry Date'
-                    error={errors.stability}
+                    error={errors.expiryDate}
                     theme={theme}
                   >
                     <DatePickerInput
@@ -428,18 +424,17 @@ const InsertNewSubstance = () => {
                       style={{ backgroundColor: theme.colors.background, borderColor: theme.colors.border }}
                     >
                       <div>
-                        <div className="font-semibold" style={{ color: theme.colors.text }}>{spec.name}</div>
+                        <div className="font-semibold" style={{ color: theme.colors.text }}>{spec.testName}</div>
                         <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
                             {spec.isNumerical 
-                              ? `Range: ${spec.min} - ${spec.max} | Criteria: ${spec.result}` 
-                              : `Criteria: ${spec.result}`}
+                              ? `Range: ${spec.min} - ${spec.max}` : ``}
                         </div>
                       </div>
                       <Button 
                         variant="ghost" 
                         onClick={() => setData(d => ({ ...d, specifications: d.specifications.filter(s => s.id !== spec.id) }))}
                       >
-                         <Trash2 size={16} className="text-red-500" />
+                         <Trash2 size={16} className="text-red-500 cursor-pointer" />
                       </Button>
                     </div>
                   ))}
@@ -449,20 +444,14 @@ const InsertNewSubstance = () => {
                 <div className="p-4 rounded-lg border" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}>
                    <h3 className="font-medium mb-4">Add New Specification</h3>
                    <Grid>
-                      <Field label="Specification Name (e.g. Assay)" error={undefined} theme={theme}>
+                      <Field label="Test name (e.g. Assay)" error={undefined} theme={theme}>
                         <Input 
-                          value={newSpec.name}
-                          onChange={(e) => setNewSpec(s => ({ ...s, name: e.target.value }))}
+                          value={newSpec.testName}
+                          onChange={(e) => setNewSpec(s => ({ ...s, testName: e.target.value }))}
                           placeholder="Name"
                         />
                       </Field>
-                      <Field label="Result Criteria (e.g. Clear Liquid)" error={undefined} theme={theme}>
-                        <Input 
-                          value={newSpec.result}
-                          onChange={(e) => setNewSpec(s => ({ ...s, result: e.target.value }))}
-                          placeholder="Description / Criteria"
-                        />
-                      </Field>
+
 
                       <div className="flex items-center gap-2 mt-6">
                          <input 
@@ -474,8 +463,6 @@ const InsertNewSubstance = () => {
                          />
                          <label htmlFor="isNumerical" style={{ color: theme.colors.text }}>Is Numerical?</label>
                       </div>
-                       {/* Ghost element to keep grid alignment if needed, or just let it flow */}
-                       <div></div>
 
                       {newSpec.isNumerical && (
                         <>
@@ -502,8 +489,8 @@ const InsertNewSubstance = () => {
                       <Button 
                          variant="primary"
                          onClick={() => {
-                            if (!newSpec.name || !newSpec.result) {
-                               error("Name and Result Criteria are required")
+                            if (!newSpec.testName) {
+                               error("Test name is required")
                                return
                             }
                             if (newSpec.isNumerical && (!newSpec.min || !newSpec.max)) {
@@ -513,18 +500,17 @@ const InsertNewSubstance = () => {
 
                             const spec: Specification = {
                                id: Math.random().toString(36).substr(2, 9),
-                               name: newSpec.name!,
-                               result: newSpec.result!,
+                               testName: newSpec.testName!,
                                isNumerical: newSpec.isNumerical!,
                                min: newSpec.min,
                                max: newSpec.max
                             }
                             
                             setData(d => ({ ...d, specifications: [...d.specifications, spec] }))
-                            setNewSpec({ name: '', result: '', isNumerical: false, min: '', max: '' })
+                            setNewSpec({ testName: '', isNumerical: false, min: '', max: '' })
                          }}
                       >
-                         <Plus size={16} className="mr-2" />
+                         <Plus size={16}/>
                          Add Specification
                       </Button>
                    </div>
@@ -621,4 +607,4 @@ const Field = ({ label, error, children, theme }: { label: string, error: string
 )
 
 
-export default InsertNewSubstance
+export default InsertNewProduct
