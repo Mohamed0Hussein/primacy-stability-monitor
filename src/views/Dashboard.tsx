@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import moment from 'moment';
-import { Calendar, FlaskConical, ArrowRight } from 'lucide-react';
+import { Calendar, FlaskConical, ArrowRight, Eye } from 'lucide-react';
 
 import { useTheme } from '../hooks/useTheme';
 import { Button } from '../components/common/Button';
@@ -38,7 +38,6 @@ export default function Dashboard() {
     },
   });
 
-  console.log(products);
   const sortedProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
 
@@ -182,7 +181,14 @@ export default function Dashboard() {
                                             {sub.formattedNextDate}
                                         </p>
                                     </div>
-                                    {/* Action button if needed */}
+                                    <Button 
+                                        variant="ghost"
+                                        onClick={() => navigate(`/product/${sub._id}/tests`)}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <Eye size={16} />
+                                        View Tests
+                                    </Button>
                                 </div>
                             </div>
                         </Card>

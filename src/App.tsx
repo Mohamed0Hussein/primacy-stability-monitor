@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router'
 import ROUTE_PATHS from './constants/route_paths';
 import InsertNewProduct from './views/InsertNewProduct';
 import Dashboard from './views/Dashboard';
+import TestDetails from './views/TestDetails';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './contexts/AuthProvider';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -28,6 +29,11 @@ function App() {
             <Route path={ROUTE_PATHS.INSERT_PRODUCT} element={
               <ProtectedRoute>
                 <InsertNewProduct/>
+              </ProtectedRoute>
+            }/>
+            <Route path={ROUTE_PATHS.TEST_DETAILS} element={
+              <ProtectedRoute>
+                <TestDetails/>
               </ProtectedRoute>
             }/>
           </Routes>

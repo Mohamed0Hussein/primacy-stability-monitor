@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Check } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 
 type Option = {
@@ -31,11 +31,6 @@ export default function Pick({
   const groups = Array.isArray(options[0])
     ? (options as Option[][])
     : [options as Option[]]
-
-  const onPrimary =
-    theme.name === 'dark'
-      ? theme.colors.background
-      : '#fff'
 
   /* ✅ Click outside */
   useEffect(() => {
@@ -79,9 +74,11 @@ export default function Pick({
     if (!multiple)
       return flat.find(o => o.value === value)?.label ?? placeholder
 
-    return (value as string[])
-      .map(v => flat.find(o => o.value === v)?.label)
-      .join(', ')
+    const selectedCount = (value as string[]).length
+    if (selectedCount === 1) {
+      return flat.find(o => o.value === (value as string[])[0])?.label ?? placeholder
+    }
+    return `${selectedCount} selected`
   }
 
   return (
@@ -100,7 +97,13 @@ export default function Pick({
         }}
       >
         <span className="truncate">{displayLabel()}</span>
-        <ChevronDown size={16} />
+        <ChevronDown 
+          size={16} 
+          style={{
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease'
+          }}
+        />
       </button>
 
       {/* Dropdown */}
@@ -124,27 +127,47 @@ export default function Pick({
                       key={opt.value}
                       type="button"
                       onClick={() => toggle(opt.value)}
-                      className="w-full text-left px-3 py-2 rounded text-sm transition-colors"
+                      className="w-full text-left px-3 py-2 rounded text-sm transition-all flex items-center gap-3"
                       style={{
-                        backgroundColor: active
+                        backgroundColor: active && !multiple
                           ? theme.colors.primary
                           : 'transparent',
-                        color: active
-                          ? onPrimary
+                        color: active && !multiple
+                          ? (theme.name === 'dark' ? theme.colors.background : '#fff')
                           : theme.colors.text,
                       }}
                       onMouseEnter={e => {
-                        if (!active)
+                        if (!active || multiple)
                           e.currentTarget.style.backgroundColor =
                             theme.colors.surfaceVariant
                       }}
                       onMouseLeave={e => {
-                        if (!active)
+                        if (!active || multiple)
                           e.currentTarget.style.backgroundColor =
                             'transparent'
                       }}
                     >
-                      {opt.label}
+                      {/* Checkbox for multi-select */}
+                      {multiple && (
+                        <div
+                          className="shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
+                          style={{
+                            borderColor: active ? theme.colors.primary : theme.colors.border,
+                            backgroundColor: active ? theme.colors.primary : 'transparent',
+                          }}
+                        >
+                          {active && (
+                            <Check 
+                              size={12} 
+                              strokeWidth={3}
+                              style={{ 
+                                color: theme.name === 'dark' ? theme.colors.background : '#fff'
+                              }} 
+                            />
+                          )}
+                        </div>
+                      )}
+                      <span className="flex-1">{opt.label}</span>
                     </button>
                   )
                 })}
