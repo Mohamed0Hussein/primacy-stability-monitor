@@ -73,7 +73,7 @@ const dosageForm = [
 const baseTemperatures = [5, 25, 30, 40] as const
 const conditionTypes = ['Accelerated', 'Long-term'] as const
 
-const conditionsOptions = baseTemperatures.flatMap(temp => 
+const conditionsOptions = baseTemperatures.flatMap(temp =>
   conditionTypes.map(type => ({
     label: `${conditionDetails[temp]} - ${type}`,
     value: `${temp}-${type}`
@@ -115,17 +115,17 @@ const InsertNewProduct = () => {
   })
 
 
-  const { mutateAsync : insertProductMutation } = useMutation({
-    mutationFn : insertProduct,
-    mutationKey : [queryKeys.insert_product, data],
-    onSuccess : () => {
+  const { mutateAsync: insertProductMutation } = useMutation({
+    mutationFn: insertProduct,
+    mutationKey: [queryKeys.insert_product, data],
+    onSuccess: () => {
       success('Product inserted successfully')
     },
-    onError : () => {
+    onError: () => {
       error('Failed to insert product')
     },
-    retry : 1,
-    retryDelay : 1000
+    retry: 1,
+    retryDelay: 1000
   })
 
   const validateStep = () => {
@@ -160,7 +160,7 @@ const InsertNewProduct = () => {
     if (!validateStep()) return
     setStep(s => s + 1)
   }
-  
+
   const submit = () => {
     if (!validateStep()) return
 
@@ -169,27 +169,27 @@ const InsertNewProduct = () => {
 
     selectedConditions.forEach(condition => {
       let datesForCondition: Moment[] = [];
-      
+
       if (condition.includes('Accelerated')) {
-         // 1, 3, 6 months
-         datesForCondition = [
-            moment().add(1, 'months').startOf('day'),
-            moment().add(3, 'months').startOf('day'),
-            moment().add(6, 'months').startOf('day')
-         ];
+        // 1, 3, 6 months
+        datesForCondition = [
+          moment().add(1, 'months').startOf('day'),
+          moment().add(3, 'months').startOf('day'),
+          moment().add(6, 'months').startOf('day')
+        ];
       } else if (condition.includes('Long-term')) {
-         // 3, 6, 9, 12, 18, 24, 36 months
-         datesForCondition = [
-            moment().add(3, 'months').startOf('day'),
-            moment().add(6, 'months').startOf('day'),
-            moment().add(9, 'months').startOf('day'),
-            moment().add(12, 'months').startOf('day'),
-            moment().add(18, 'months').startOf('day'),
-            moment().add(24, 'months').startOf('day'),
-            moment().add(36, 'months').startOf('day')
-         ];
+        // 3, 6, 9, 12, 18, 24, 36 months
+        datesForCondition = [
+          moment().add(3, 'months').startOf('day'),
+          moment().add(6, 'months').startOf('day'),
+          moment().add(9, 'months').startOf('day'),
+          moment().add(12, 'months').startOf('day'),
+          moment().add(18, 'months').startOf('day'),
+          moment().add(24, 'months').startOf('day'),
+          moment().add(36, 'months').startOf('day')
+        ];
       }
-      
+
       datesForCondition.forEach(d => {
         tests.push({ condition, date: d });
       });
@@ -199,11 +199,11 @@ const InsertNewProduct = () => {
     tests.sort((a, b) => a.date.diff(b.date));
 
     data.tests = tests;
-    
+
     console.log(data)
-    // insertProductMutation(data)
+    insertProductMutation(data)
   }
-  
+
 
   return (
     <>
@@ -254,7 +254,7 @@ const InsertNewProduct = () => {
                   </Field>
                   <Field label="Dosage form" error={errors.dosageForm} theme={theme}>
                     <Pick
-                    options={dosageForm.map(dosage => ({label: dosage, value: dosage}))}
+                      options={dosageForm.map(dosage => ({ label: dosage, value: dosage }))}
                       value={data.dosageForm}
                       onChange={e =>
                         setData(d => ({ ...d, dosageForm: Array.isArray(e) ? e[0] : e }))
@@ -271,7 +271,7 @@ const InsertNewProduct = () => {
                   </Field>
                   <Field label="Pack type" error={errors.packType} theme={theme}>
                     <Pick
-                    options={packTypes.map(arrayOfTypes => arrayOfTypes.map(type => ({label : type, value : type})))}
+                      options={packTypes.map(arrayOfTypes => arrayOfTypes.map(type => ({ label: type, value: type })))}
                       value={data.packType}
                       onChange={e =>
                         setData(d => ({ ...d, packType: Array.isArray(e) ? e[0] : e }))
@@ -285,8 +285,8 @@ const InsertNewProduct = () => {
                       multiple={true}
                       placeholder="Select conditions..."
                       onChange={e => {
-                          const val = Array.isArray(e) ? e : [e];
-                          setData(d => ({ ...d, conditions: val }))
+                        const val = Array.isArray(e) ? e : [e];
+                        setData(d => ({ ...d, conditions: val }))
                       }}
                     />
                   </Field>
@@ -383,7 +383,7 @@ const InsertNewProduct = () => {
                       }
                     />
                   </Field>
-                  <Field 
+                  <Field
                     label='Expiry Date'
                     error={errors.expiryDate}
                     theme={theme}
@@ -413,28 +413,28 @@ const InsertNewProduct = () => {
                 {/* List of added specifications */}
                 <div className="space-y-3 mb-6">
                   {data.specifications.length === 0 && (
-                     <div className="text-center py-6 border-2 border-dashed rounded-lg opacity-60" style={{ borderColor: theme.colors.border }}>
-                        <p>No specifications added yet.</p>
-                     </div>
+                    <div className="text-center py-6 border-2 border-dashed rounded-lg opacity-60" style={{ borderColor: theme.colors.border }}>
+                      <p>No specifications added yet.</p>
+                    </div>
                   )}
                   {data.specifications.map((spec) => (
-                    <div 
-                      key={spec.id} 
+                    <div
+                      key={spec.id}
                       className="p-3 rounded-lg flex items-center justify-between border"
                       style={{ backgroundColor: theme.colors.background, borderColor: theme.colors.border }}
                     >
                       <div>
                         <div className="font-semibold" style={{ color: theme.colors.text }}>{spec.testName}</div>
                         <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
-                            {spec.isNumerical 
-                              ? `Range: ${spec.min} - ${spec.max}` : ``}
+                          {spec.isNumerical
+                            ? `Range: ${spec.min} - ${spec.max}` : ``}
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         onClick={() => setData(d => ({ ...d, specifications: d.specifications.filter(s => s.id !== spec.id) }))}
                       >
-                         <Trash2 size={16} className="text-red-500 cursor-pointer" />
+                        <Trash2 size={16} className="text-red-500 cursor-pointer" />
                       </Button>
                     </div>
                   ))}
@@ -442,78 +442,78 @@ const InsertNewProduct = () => {
 
                 {/* Add new specification form */}
                 <div className="p-4 rounded-lg border" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}>
-                   <h3 className="font-medium mb-4">Add New Specification</h3>
-                   <Grid>
-                      <Field label="Test name (e.g. Assay)" error={undefined} theme={theme}>
-                        <Input 
-                          value={newSpec.testName}
-                          onChange={(e) => setNewSpec(s => ({ ...s, testName: e.target.value }))}
-                          placeholder="Name"
-                        />
-                      </Field>
+                  <h3 className="font-medium mb-4">Add New Specification</h3>
+                  <Grid>
+                    <Field label="Test name (e.g. Assay)" error={undefined} theme={theme}>
+                      <Input
+                        value={newSpec.testName}
+                        onChange={(e) => setNewSpec(s => ({ ...s, testName: e.target.value }))}
+                        placeholder="Name"
+                      />
+                    </Field>
 
 
-                      <div className="flex items-center gap-2 mt-6">
-                         <input 
-                           type="checkbox" 
-                           id="isNumerical"
-                           checked={newSpec.isNumerical}
-                           onChange={(e) => setNewSpec(s => ({ ...s, isNumerical: e.target.checked }))}
-                           className="w-4 h-4"
-                         />
-                         <label htmlFor="isNumerical" style={{ color: theme.colors.text }}>Is Numerical?</label>
-                      </div>
+                    <div className="flex items-center gap-2 mt-6">
+                      <input
+                        type="checkbox"
+                        id="isNumerical"
+                        checked={newSpec.isNumerical}
+                        onChange={(e) => setNewSpec(s => ({ ...s, isNumerical: e.target.checked }))}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="isNumerical" style={{ color: theme.colors.text }}>Is Numerical?</label>
+                    </div>
 
-                      {newSpec.isNumerical && (
-                        <>
-                           <Field label="Min Value" error={undefined} theme={theme}>
-                              <Input 
-                                type="number"
-                                value={newSpec.min}
-                                onChange={(e) => setNewSpec(s => ({ ...s, min: e.target.value }))}
-                                placeholder="0"
-                              />
-                           </Field>
-                           <Field label="Max Value" error={undefined} theme={theme}>
-                              <Input 
-                                type="number"
-                                value={newSpec.max}
-                                onChange={(e) => setNewSpec(s => ({ ...s, max: e.target.value }))}
-                                placeholder="100"
-                              />
-                           </Field>
-                        </>
-                      )}
-                   </Grid>
-                   <div className="mt-4 flex justify-end">
-                      <Button 
-                         variant="primary"
-                         onClick={() => {
-                            if (!newSpec.testName) {
-                               error("Test name is required")
-                               return
-                            }
-                            if (newSpec.isNumerical && (!newSpec.min || !newSpec.max)) {
-                                error("Min and Max values are required for numerical specifications")
-                                return
-                            }
+                    {newSpec.isNumerical && (
+                      <>
+                        <Field label="Min Value" error={undefined} theme={theme}>
+                          <Input
+                            type="number"
+                            value={newSpec.min}
+                            onChange={(e) => setNewSpec(s => ({ ...s, min: e.target.value }))}
+                            placeholder="0"
+                          />
+                        </Field>
+                        <Field label="Max Value" error={undefined} theme={theme}>
+                          <Input
+                            type="number"
+                            value={newSpec.max}
+                            onChange={(e) => setNewSpec(s => ({ ...s, max: e.target.value }))}
+                            placeholder="100"
+                          />
+                        </Field>
+                      </>
+                    )}
+                  </Grid>
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        if (!newSpec.testName) {
+                          error("Test name is required")
+                          return
+                        }
+                        if (newSpec.isNumerical && (!newSpec.min || !newSpec.max)) {
+                          error("Min and Max values are required for numerical specifications")
+                          return
+                        }
 
-                            const spec: Specification = {
-                               id: Math.random().toString(36).substr(2, 9),
-                               testName: newSpec.testName!,
-                               isNumerical: newSpec.isNumerical!,
-                               min: newSpec.min,
-                               max: newSpec.max
-                            }
-                            
-                            setData(d => ({ ...d, specifications: [...d.specifications, spec] }))
-                            setNewSpec({ testName: '', isNumerical: false, min: '', max: '' })
-                         }}
-                      >
-                         <Plus size={16}/>
-                         Add Specification
-                      </Button>
-                   </div>
+                        const spec: Specification = {
+                          id: Math.random().toString(36).substr(2, 9),
+                          testName: newSpec.testName!,
+                          isNumerical: newSpec.isNumerical!,
+                          min: newSpec.min,
+                          max: newSpec.max
+                        }
+
+                        setData(d => ({ ...d, specifications: [...d.specifications, spec] }))
+                        setNewSpec({ testName: '', isNumerical: false, min: '', max: '' })
+                      }}
+                    >
+                      <Plus size={16} />
+                      Add Specification
+                    </Button>
+                  </div>
                 </div>
               </Section>
             )}
@@ -554,7 +554,7 @@ const InsertNewProduct = () => {
 
 /* ---------- helpers ---------- */
 
-const Section = ({ icon, title, children, theme }: { icon : React.ReactNode, title: string, children: React.ReactNode, theme: Theme}) => (
+const Section = ({ icon, title, children, theme }: { icon: React.ReactNode, title: string, children: React.ReactNode, theme: Theme }) => (
   <section className="mb-8">
     <h2
       className="flex items-center gap-2 font-semibold mb-4"
@@ -578,8 +578,8 @@ const Grid = ({
     cols === 3
       ? 'md:grid-cols-3'
       : cols === 1
-      ? 'md:grid-cols-1'
-      : 'md:grid-cols-2'
+        ? 'md:grid-cols-1'
+        : 'md:grid-cols-2'
 
   return (
     <div className={`grid grid-cols-1 ${colsClass} gap-4`}>
@@ -589,7 +589,7 @@ const Grid = ({
 }
 
 
-const Field = ({ label, error, children, theme }: { label: string, error: string | undefined, children: React.ReactNode, theme: Theme}) => (
+const Field = ({ label, error, children, theme }: { label: string, error: string | undefined, children: React.ReactNode, theme: Theme }) => (
   <div className="space-y-1">
     <label
       className="text-sm font-medium"
