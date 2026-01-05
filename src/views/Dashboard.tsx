@@ -184,7 +184,7 @@ export default function Dashboard() {
                                     <Button 
                                         variant="ghost"
                                         onClick={() => navigate(`/product/${sub._id}/tests`)}
-                                        className="flex items-center gap-2"
+                                        className="flex items-center gap-2 cursor-pointer"
                                     >
                                         <Eye size={16} />
                                         View Tests
