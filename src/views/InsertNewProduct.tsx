@@ -200,7 +200,6 @@ const InsertNewProduct = () => {
 
     data.tests = tests;
 
-    console.log(data)
     insertProductMutation(data)
   }
 

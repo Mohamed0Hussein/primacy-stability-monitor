@@ -27,7 +27,7 @@ import ROUTE_PATHS from '../constants/route_paths'
 
 interface TestResult {
   specName: string
-  value: string
+  value: any
   status: 'pass' | 'fail' | 'pending'
 }
 
@@ -55,6 +55,7 @@ interface Product {
   strength: string
   packType: string
   tests?: Test[]
+  testsResults?: TestResult[]
   specifications?: Specification[]
 }
 
@@ -66,8 +67,6 @@ export default function TestDetails() {
   const queryClient = useQueryClient()
 
   const [expandedTest, setExpandedTest] = useState<string | null>(null)
-  const [testResults, setTestResults] = useState<Record<string, Record<string, string>>>({})
-  const [validationErrors, setValidationErrors] = useState<Record<string, Record<string, string>>>({})
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: [queryKeys.get_products],
@@ -98,114 +97,14 @@ export default function TestDetails() {
     }
   })
 
-  const getTestStatus = (dateStr: string): 'pending' | 'completed' | 'overdue' => {
-    const testDate = moment(dateStr)
+  const getTestStatus = (test: Test): 'pending' | 'completed' | 'overdue' => {
+    if (test.results && test.results.length > 0) return 'completed'
+    
+    const testDate = moment(test.date)
     const now = moment().startOf('day')
 
     if (testDate.isBefore(now)) return 'overdue'
     return 'pending'
-  }
-
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return {
-          icon: CheckCircle2,
-          color: theme.colors.success,
-          bgColor: `${theme.colors.success}15`,
-          label: 'Completed'
-        }
-      case 'overdue':
-        return {
-          icon: AlertCircle,
-          color: theme.colors.error,
-          bgColor: `${theme.colors.error}15`,
-          label: 'Overdue'
-        }
-      default:
-        return {
-          icon: Clock,
-          color: theme.colors.warning,
-          bgColor: `${theme.colors.warning}15`,
-          label: 'Pending'
-        }
-    }
-  }
-
-  const validateValue = (spec: Specification, value: string): string | null => {
-    if (!value) return null // Empty value is handled by submission check
-
-    if (spec.isNumerical) {
-      const numVal = parseFloat(value)
-      if (isNaN(numVal)) return 'Must be a number'
-
-      if (spec.min && numVal < parseFloat(spec.min)) {
-        return `Value must be >= ${spec.min}`
-      }
-      if (spec.max && numVal > parseFloat(spec.max)) {
-        return `Value must be <= ${spec.max}`
-      }
-    }
-    return null
-  }
-
-  const handleResultChange = (testKey: string, spec: Specification, value: string) => {
-    setTestResults(prev => ({
-      ...prev,
-      [testKey]: {
-        ...prev[testKey],
-        [spec.testName]: value
-      }
-    }))
-
-    // Validate on change
-    const error = validateValue(spec, value)
-    setValidationErrors(prev => ({
-      ...prev,
-      [testKey]: {
-        ...prev[testKey],
-        [spec.testName]: error || ''
-      }
-    }))
-  }
-
-  const handleSubmitResults = (test: Test, testKey: string) => {
-    const results = testResults[testKey]
-    if (!results || Object.keys(results).length === 0) {
-      showError('Please enter at least one result')
-      return
-    }
-
-    // Check for validation errors
-    const currentErrors = validationErrors[testKey] || {}
-    const hasErrors = Object.values(currentErrors).some(err => !!err)
-    if (hasErrors) {
-      showError('Please fix validation errors before submitting')
-      return
-    }
-
-    // Check if required fields (all specs ideally) are filled? 
-    // For now, let's enforce all defined specs must be filled or at least validated
-    if (product?.specifications) {
-      const missingSpecs = product.specifications.filter((s: Specification) => !results[s.testName])
-      if (missingSpecs.length > 0) {
-        showError(`Please enter results for: ${missingSpecs.map((s: Specification) => s.testName).join(', ')}`)
-        return
-      }
-    }
-
-    // We need the Test ID (actual one from DB) to submit
-    if (!test._id) {
-      // Fallback or error if _id is missing on the client type but actually needed
-      // Assuming test object has _id
-      showError('Test ID missing. Cannot submit.')
-      return
-    }
-
-    submitMutation.mutate({
-      testId: test._id,
-      results: results
-    })
   }
 
   type EnrichedTest = Test & {
@@ -218,19 +117,29 @@ export default function TestDetails() {
     if (!product?.tests) return { upcoming: [], past: [] }
 
     const now = moment().startOf('day')
-    const tests: EnrichedTest[] = product.tests.map((t: Test, index: number) => ({
-      ...t,
-      key: `${t.condition}-${t.date}-${index}`,
-      momentDate: moment(t.date),
-      computedStatus: getTestStatus(t.date)
-    }))
+    const tests: EnrichedTest[] = product.tests.map((t: Test, index: number) => {
+      // Filter results that belong to this specific test ID
+      const resultsForTest = product.testsResults?.filter((r: any) => r.testId === t._id) || []
+      
+      const testWithResults = {
+        ...t,
+        results: resultsForTest
+      }
+
+      return {
+        ...testWithResults,
+        key: `${t.condition}-${t.date}-${index}`,
+        momentDate: moment(t.date),
+        computedStatus: getTestStatus(testWithResults as Test)
+      }
+    })
 
     return {
       upcoming: tests
-        .filter((t: EnrichedTest) => t.momentDate.isSameOrAfter(now))
+        .filter((t: EnrichedTest) => t.momentDate.isSameOrAfter(now) && t.computedStatus !== 'completed')
         .sort((a: EnrichedTest, b: EnrichedTest) => a.momentDate.diff(b.momentDate)),
       past: tests
-        .filter((t: EnrichedTest) => t.momentDate.isBefore(now))
+        .filter((t: EnrichedTest) => t.momentDate.isBefore(now) || t.computedStatus === 'completed')
         .sort((a: EnrichedTest, b: EnrichedTest) => b.momentDate.diff(a.momentDate))
     }
   }, [product])
@@ -269,160 +178,6 @@ export default function TestDetails() {
           </Button>
         </Card>
       </div>
-    )
-  }
-
-  const TestCard = ({ test, isUpcoming = true }: { test: EnrichedTest, isUpcoming?: boolean }) => {
-    const statusConfig = getStatusConfig(test.computedStatus)
-    const StatusIcon = statusConfig.icon
-    const isExpanded = expandedTest === test.key
-    const currentResults = testResults[test.key] || {}
-
-    return (
-      <Card
-        className="overflow-hidden transition-all duration-300"
-        style={{
-          borderLeft: `4px solid ${statusConfig.color}`,
-        }}
-      >
-        {/* Test Header */}
-        <div
-          className="p-4 cursor-pointer flex items-center justify-between gap-4 hover:bg-opacity-50 transition-colors"
-          style={{ backgroundColor: isExpanded ? theme.colors.surfaceVariant : 'transparent' }}
-          onClick={() => setExpandedTest(isExpanded ? null : test.key)}
-        >
-          <div className="flex items-center gap-4">
-            <div
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: statusConfig.bgColor }}
-            >
-              <StatusIcon size={20} style={{ color: statusConfig.color }} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold" style={{ color: theme.colors.text }}>
-                  {test.condition.replace('-', ' - ')}
-                </h3>
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{
-                    backgroundColor: statusConfig.bgColor,
-                    color: statusConfig.color
-                  }}
-                >
-                  {statusConfig.label}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-1" style={{ color: theme.colors.textSecondary }}>
-                <Calendar size={14} />
-                <span className="text-sm">
-                  {test.momentDate.format('MMMM DD, YYYY')}
-                </span>
-                <span className="text-sm opacity-60">
-                  ({test.momentDate.fromNow()})
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isUpcoming && (
-              <Button
-                variant="ghost"
-                className="p-2!"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setExpandedTest(isExpanded ? null : test.key)
-                }}
-              >
-                {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Expanded Content - Result Entry Form */}
-        {isExpanded && isUpcoming && (
-          <div
-            className="border-t p-4 animate-fadeIn"
-            style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}
-          >
-            <h4 className="font-medium mb-4 flex items-center gap-2" style={{ color: theme.colors.text }}>
-              <FlaskConical size={16} style={{ color: theme.colors.primary }} />
-              Enter Test Results
-            </h4>
-
-            {product.specifications && product.specifications.length > 0 ? (
-              <div className="space-y-4">
-                {product.specifications.map((spec: Specification) => (
-                  <div
-                    key={spec.id}
-                    className="p-3 rounded-lg border transition-colors"
-                    style={{
-                      borderColor: validationErrors[test.key]?.[spec.testName] ? theme.colors.error : theme.colors.border,
-                      backgroundColor: theme.colors.background
-                    }}
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center gap-3">
-                      <div className="flex-1">
-                        <label
-                          className="font-medium text-sm block mb-1"
-                          style={{ color: theme.colors.text }}
-                        >
-                          {spec.testName}
-                        </label>
-                        {spec.isNumerical && (
-                          <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                            Acceptable range: {spec.min} - {spec.max}
-                          </p>
-                        )}
-                        {validationErrors[test.key]?.[spec.testName] && (
-                          <p className="text-xs mt-1 animate-fadeIn" style={{ color: theme.colors.error }}>
-                            {validationErrors[test.key]?.[spec.testName]}
-                          </p>
-                        )}
-                      </div>
-                      <div className="md:w-48">
-                        <Input
-                          type={spec.isNumerical ? 'number' : 'text'}
-                          placeholder={spec.isNumerical ? `${spec.min} - ${spec.max}` : 'Enter result...'}
-                          value={currentResults[spec.testName] || ''}
-                          onChange={(e) => handleResultChange(test.key, spec, e.target.value)}
-                          className={validationErrors[test.key]?.[spec.testName] ? 'border-red-500 focus:border-red-500' : ''}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                <div className="flex justify-end pt-2">
-                  <Button
-                    variant="primary"
-                    onClick={() => handleSubmitResults(test, test.key)}
-                    disabled={submitMutation.isPending}
-                  >
-                    {submitMutation.isPending ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Send size={16} />
-                    )}
-                    {submitMutation.isPending ? 'Submitting...' : 'Submit Results'}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div
-                className="text-center py-6 border-2 border-dashed rounded-lg"
-                style={{ borderColor: theme.colors.border, color: theme.colors.textSecondary }}
-              >
-                <FlaskConical size={32} className="mx-auto mb-2 opacity-50" />
-                <p>No specifications defined for this product.</p>
-                <p className="text-sm mt-1">Add specifications when creating the product to enable result entry.</p>
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
     )
   }
 
@@ -531,7 +286,16 @@ export default function TestDetails() {
           {groupedTests.upcoming.length > 0 ? (
             <div className="space-y-3">
               {groupedTests.upcoming.map((test: EnrichedTest) => (
-                <TestCard key={test.key} test={test} isUpcoming={true} />
+                <TestCard 
+                  key={test.key} 
+                  test={test} 
+                  isUpcoming={true} 
+                  expandedTest={expandedTest}
+                  onToggleExpand={(key) => setExpandedTest(prev => prev === key ? null : key)}
+                  specifications={product.specifications || []}
+                  onSubmit={(results) => submitMutation.mutate({ testId: test._id!, results })}
+                  isSubmitting={submitMutation.isPending}
+                />
               ))}
             </div>
           ) : (
@@ -563,12 +327,363 @@ export default function TestDetails() {
 
             <div className="space-y-3">
               {groupedTests.past.map((test: EnrichedTest) => (
-                <TestCard key={test.key} test={test} isUpcoming={false} />
+                <TestCard 
+                  key={test.key} 
+                  test={test} 
+                  isUpcoming={false}
+                  expandedTest={expandedTest}
+                  onToggleExpand={(key) => setExpandedTest(prev => prev === key ? null : key)}
+                  specifications={product.specifications || []}
+                  onSubmit={() => {}} 
+                  isSubmitting={false}
+                />
               ))}
             </div>
           </section>
         )}
       </div>
     </div>
+  )
+}
+
+interface TestCardProps {
+  test: any // EnrichedTest
+  isUpcoming: boolean
+  expandedTest: string | null
+  onToggleExpand: (key: string) => void
+  specifications: Specification[]
+  onSubmit: (results: Record<string, string>) => void
+  isSubmitting: boolean
+}
+
+function TestCard({ 
+  test, 
+  isUpcoming, 
+  expandedTest, 
+  onToggleExpand, 
+  specifications,
+  onSubmit, 
+  isSubmitting 
+}: TestCardProps) {
+  const { theme } = useTheme()
+  
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return {
+          icon: CheckCircle2,
+          color: theme.colors.success,
+          bgColor: `${theme.colors.success}15`,
+          label: 'Completed'
+        }
+      case 'overdue':
+        return {
+          icon: AlertCircle,
+          color: theme.colors.error,
+          bgColor: `${theme.colors.error}15`,
+          label: 'Overdue'
+        }
+      default:
+        return {
+          icon: Clock,
+          color: theme.colors.warning,
+          bgColor: `${theme.colors.warning}15`,
+          label: 'Pending'
+        }
+    }
+  }
+
+  const statusConfig = getStatusConfig(test.computedStatus)
+  const StatusIcon = statusConfig.icon
+  const isExpanded = expandedTest === test.key
+
+  return (
+    <Card
+      className="overflow-hidden transition-all duration-300"
+      style={{
+        borderLeft: `4px solid ${statusConfig.color}`,
+      }}
+    >
+      {/* Test Header */}
+      <div
+        className="p-4 cursor-pointer flex items-center justify-between gap-4 hover:bg-opacity-50 transition-colors"
+        style={{ backgroundColor: isExpanded ? theme.colors.surfaceVariant : 'transparent' }}
+        onClick={() => onToggleExpand(test.key)}
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className="p-2 rounded-lg"
+            style={{ backgroundColor: statusConfig.bgColor }}
+          >
+            <StatusIcon size={20} style={{ color: statusConfig.color }} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold" style={{ color: theme.colors.text }}>
+                {test.condition.replace('-', ' - ')}
+              </h3>
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium"
+                style={{
+                  backgroundColor: statusConfig.bgColor,
+                  color: statusConfig.color
+                }}
+              >
+                {statusConfig.label}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-1" style={{ color: theme.colors.textSecondary }}>
+              <Calendar size={14} />
+              <span className="text-sm">
+                {test.momentDate.format('MMMM DD, YYYY')}
+              </span>
+              <span className="text-sm opacity-60">
+                ({test.momentDate.fromNow()})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            className="p-2!"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleExpand(test.key)
+            }}
+          >
+            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div
+          className="border-t p-4 animate-fadeIn"
+          style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}
+        >
+          {test.computedStatus === 'completed' ? (
+            <CompletedResultsView 
+              results={test.results || []} 
+              specifications={specifications} 
+            />
+          ) : isUpcoming ? (
+            <TestResultForm 
+              specifications={specifications} 
+              onSubmit={onSubmit}
+              isSubmitting={isSubmitting}
+            />
+          ) : (
+            <div className="text-center py-4" style={{ color: theme.colors.textSecondary }}>
+              <Clock size={24} className="mx-auto mb-2 opacity-50" />
+              <p>This test is overdue. Please enter results as soon as possible.</p>
+              <div className="mt-4">
+                <TestResultForm 
+                  specifications={specifications} 
+                  onSubmit={onSubmit}
+                  isSubmitting={isSubmitting}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function CompletedResultsView({ results, specifications }: { results: any[], specifications: Specification[] }) {
+  const { theme } = useTheme()
+  // The first result contains the test values as keys
+  const latestResult = results[0] || {}
+
+  return (
+    <div className="space-y-4">
+      <h4 className="font-medium mb-4 flex items-center gap-2" style={{ color: theme.colors.text }}>
+        <CheckCircle2 size={16} style={{ color: theme.colors.success }} />
+        Submitted Results
+      </h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {specifications.map(spec => (
+          <div 
+            key={spec.id} 
+            className="p-3 rounded-lg border flex flex-col justify-center"
+            style={{ 
+              borderColor: theme.colors.border, 
+              backgroundColor: theme.colors.background,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: theme.colors.textSecondary }}>
+              {spec.testName}
+            </p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-lg font-bold" style={{ color: theme.colors.primary }}>
+                {latestResult[spec.testName] || 'N/A'}
+              </p>
+            </div>
+            {spec.isNumerical && (
+              <p className="text-[10px] mt-1" style={{ color: theme.colors.textSecondary }}>
+                Limit: {spec.min} - {spec.max}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+      {latestResult.createdAt && (
+        <div 
+          className="mt-6 pt-4 border-t flex items-center gap-2 text-xs" 
+          style={{ borderColor: theme.colors.border, color: theme.colors.textSecondary }}
+        >
+          <Clock size={12} />
+          <span>Recorded on {moment(latestResult.createdAt).format('MMMM DD, YYYY [at] HH:mm')}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface TestResultFormProps {
+  specifications: Specification[]
+  onSubmit: (results: Record<string, string>) => void
+  isSubmitting: boolean
+}
+
+function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFormProps) {
+  const { theme } = useTheme()
+  const { error: showError } = useToast()
+  
+  const [results, setResults] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const validateValue = (spec: Specification, value: string): string | null => {
+    if (!value) return null
+
+    if (spec.isNumerical) {
+      const numVal = parseFloat(value)
+      if (isNaN(numVal)) return 'Must be a number'
+
+      if (spec.min && numVal < parseFloat(spec.min)) {
+        return `Value must be >= ${spec.min}`
+      }
+      if (spec.max && numVal > parseFloat(spec.max)) {
+        return `Value must be <= ${spec.max}`
+      }
+    }
+    return null
+  }
+
+  const handleChange = (spec: Specification, value: string) => {
+    setResults(prev => ({
+      ...prev,
+      [spec.testName]: value
+    }))
+
+    const error = validateValue(spec, value)
+    setErrors(prev => ({
+      ...prev,
+      [spec.testName]: error || ''
+    }))
+  }
+
+  const handleSubmit = () => {
+    if (Object.keys(results).length === 0) {
+      showError('Please enter at least one result')
+      return
+    }
+
+    const hasErrors = Object.values(errors).some(err => !!err)
+    if (hasErrors) {
+      showError('Please fix validation errors before submitting')
+      return
+    }
+
+    const missingSpecs = specifications.filter(s => !results[s.testName])
+    if (missingSpecs.length > 0) {
+      showError(`Please enter results for: ${missingSpecs.map(s => s.testName).join(', ')}`)
+      return
+    }
+
+    onSubmit(results)
+  }
+
+  return (
+    <>
+      <h4 className="font-medium mb-4 flex items-center gap-2" style={{ color: theme.colors.text }}>
+        <FlaskConical size={16} style={{ color: theme.colors.primary }} />
+        Enter Test Results
+      </h4>
+
+      {specifications && specifications.length > 0 ? (
+        <div className="space-y-4">
+          {specifications.map((spec: Specification) => (
+            <div
+              key={spec.id}
+              className="p-3 rounded-lg border transition-colors"
+              style={{
+                borderColor: errors[spec.testName] ? theme.colors.error : theme.colors.border,
+                backgroundColor: theme.colors.background
+              }}
+            >
+              <div className="flex flex-col md:flex-row md:items-center gap-3">
+                <div className="flex-1">
+                  <label
+                    className="font-medium text-sm block mb-1"
+                    style={{ color: theme.colors.text }}
+                  >
+                    {spec.testName}
+                  </label>
+                  {spec.isNumerical && (
+                    <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                      Acceptable range: {spec.min} - {spec.max}
+                    </p>
+                  )}
+                  {errors[spec.testName] && (
+                    <p className="text-xs mt-1 animate-fadeIn" style={{ color: theme.colors.error }}>
+                      {errors[spec.testName]}
+                    </p>
+                  )}
+                </div>
+                <div className="md:w-48">
+                  <Input
+                    type={spec.isNumerical ? 'number' : 'text'}
+                    placeholder={spec.isNumerical ? `${spec.min} - ${spec.max}` : 'Enter result...'}
+                    value={results[spec.testName] || ''}
+                    onChange={(e) => handleChange(spec, e.target.value)}
+                    className={errors[spec.testName] ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Send size={16} />
+              )}
+              {isSubmitting ? 'Submitting...' : 'Submit Results'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="text-center py-6 border-2 border-dashed rounded-lg"
+          style={{ borderColor: theme.colors.border, color: theme.colors.textSecondary }}
+        >
+          <FlaskConical size={32} className="mx-auto mb-2 opacity-50" />
+          <p>No specifications defined for this product.</p>
+          <p className="text-sm mt-1">Add specifications when creating the product to enable result entry.</p>
+        </div>
+      )}
+    </>
   )
 }

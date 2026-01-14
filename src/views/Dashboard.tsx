@@ -11,6 +11,7 @@ import { Card } from '../components/common/Card';
 import { getProducts } from '../utils/api/products';
 import { queryKeys } from '../constants/query_keys';
 import ROUTE_PATHS from '../constants/route_paths';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 interface ValidationData {
     status: 'pending' | 'completed' | 'overdue';
@@ -21,7 +22,6 @@ interface Product {
   _id: string;
   productName: string;
   batchNumber: string;
-  testsDates?: string[];
   tests?: { condition: string, date: string }[];
   validations?: Record<string, ValidationData>;
 }
@@ -57,13 +57,6 @@ export default function Dashboard() {
                 upcomingDate = upcomingTest.m;
                 upcomingCondition = upcomingTest.condition;
              }
-        } else if (sub.testsDates && Array.isArray(sub.testsDates)) {
-             upcomingDate = sub.testsDates
-                .map((d: string) => moment(d))
-                .filter((m: moment.Moment) => m.isSameOrAfter(now))
-                .sort((a: moment.Moment, b: moment.Moment) => a.diff(b))[0];
-        } else {
-            // Fallback for generic 'testsDates' if it was possibly just strings in 'tests' (very unlikely)
         }
         
         const dateStr = upcomingDate ? upcomingDate.format('MMM DD, YYYY') : 'No upcoming tests';
@@ -149,7 +142,7 @@ export default function Dashboard() {
             
             <div className="space-y-4">
                 {isLoading ? (
-                    <div className="text-center py-12" style={{ color: theme.colors.textSecondary }}>Loading...</div>
+                    <LoadingSpinner fullScreen={false} size="md" loadingLabel="Loading products..." />
                 ) : sortedProducts.length === 0 ? (
                     <Card className="p-8 text-center flex flex-col items-center justify-center gap-3">
                         <FlaskConical size={48} className="text-gray-300 dark:text-gray-600" />
