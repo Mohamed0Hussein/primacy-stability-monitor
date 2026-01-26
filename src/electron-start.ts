@@ -9,11 +9,14 @@
        nodeIntegration: true, // Be cautious with nodeIntegration for security
        contextIsolation: false, // Be cautious with contextIsolation for security
      },
+     width: 1920,
+     height: 1080,
    });
 
    // Load your React app (either from the dev server or the built files)
    const startUrl = "http://localhost:5173";
    mainWindow.loadURL(startUrl);
+   mainWindow.maximize();
 
    mainWindow.on('closed', () => {
      mainWindow = null;

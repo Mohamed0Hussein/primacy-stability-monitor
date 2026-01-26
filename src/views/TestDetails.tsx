@@ -183,7 +183,7 @@ export default function TestDetails() {
 
   return (
     <div
-      className="min-h-screen pb-32"
+      className="flex-1 pb-32"
       style={{ backgroundColor: theme.colors.background }}
     >
       {/* Hero Header */}
@@ -506,31 +506,47 @@ function CompletedResultsView({ results, specifications }: { results: any[], spe
         Submitted Results
       </h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {specifications.map(spec => (
-          <div 
-            key={spec.id} 
-            className="p-3 rounded-lg border flex flex-col justify-center"
-            style={{ 
-              borderColor: theme.colors.border, 
-              backgroundColor: theme.colors.background,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-            }}
-          >
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: theme.colors.textSecondary }}>
-              {spec.testName}
-            </p>
-            <div className="flex items-baseline gap-2">
-              <p className="text-lg font-bold" style={{ color: theme.colors.primary }}>
-                {latestResult[spec.testName] || 'N/A'}
-              </p>
+        {specifications.map(spec => {
+          const value = latestResult[spec.testName];
+          const numVal = parseFloat(value);
+          const isOutOfLimits = spec.isNumerical && !isNaN(numVal) && (
+            (spec.min && numVal < parseFloat(spec.min)) || 
+            (spec.max && numVal > parseFloat(spec.max))
+          );
+
+          return (
+            <div 
+              key={spec.id} 
+              className="p-3 rounded-lg border flex flex-col justify-center transition-all duration-300"
+              style={{ 
+                borderColor: isOutOfLimits ? '#EAB308' : theme.colors.border, 
+                backgroundColor: isOutOfLimits ? 'rgba(234, 179, 8, 0.05)' : theme.colors.background,
+                boxShadow: isOutOfLimits ? '0 0 10px rgba(234, 179, 8, 0.1)' : '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+            >
+              <div className="flex justify-between items-start mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
+                  {spec.testName}
+                </p>
+                {isOutOfLimits && (
+                  <span className="text-[8px] font-bold uppercase bg-yellow-500/20 text-yellow-600 px-1.5 py-0.5 rounded-full">
+                    Out of Limits
+                  </span>
+                )}
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-lg font-bold" style={{ color: isOutOfLimits ? '#CA8A04' : theme.colors.primary }}>
+                  {value || 'N/A'}
+                </p>
+              </div>
+              {spec.isNumerical && (
+                <p className="text-[10px] mt-1" style={{ color: theme.colors.textSecondary }}>
+                  Limit: {spec.min} - {spec.max}
+                </p>
+              )}
             </div>
-            {spec.isNumerical && (
-              <p className="text-[10px] mt-1" style={{ color: theme.colors.textSecondary }}>
-                Limit: {spec.min} - {spec.max}
-              </p>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
       {latestResult.createdAt && (
         <div 
@@ -556,23 +572,20 @@ function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFo
   const { error: showError } = useToast()
   
   const [results, setResults] = useState<Record<string, string>>({})
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [validation, setValidation] = useState<Record<string, { error: string | null, warning: string | null }>>({})
 
-  const validateValue = (spec: Specification, value: string): string | null => {
-    if (!value) return null
+  const validateValue = (spec: Specification, value: string) => {
+    if (!value) return { error: null, warning: null }
 
     if (spec.isNumerical) {
       const numVal = parseFloat(value)
-      if (isNaN(numVal)) return 'Must be a number'
+      if (isNaN(numVal)) return { error: 'Must be a number', warning: null }
 
-      if (spec.min && numVal < parseFloat(spec.min)) {
-        return `Value must be >= ${spec.min}`
-      }
-      if (spec.max && numVal > parseFloat(spec.max)) {
-        return `Value must be <= ${spec.max}`
+      if ((spec.min && numVal < parseFloat(spec.min)) || (spec.max && numVal > parseFloat(spec.max))) {
+        return { error: null, warning: 'Out of limits' }
       }
     }
-    return null
+    return { error: null, warning: null }
   }
 
   const handleChange = (spec: Specification, value: string) => {
@@ -581,10 +594,10 @@ function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFo
       [spec.testName]: value
     }))
 
-    const error = validateValue(spec, value)
-    setErrors(prev => ({
+    const result = validateValue(spec, value)
+    setValidation(prev => ({
       ...prev,
-      [spec.testName]: error || ''
+      [spec.testName]: result
     }))
   }
 
@@ -594,7 +607,7 @@ function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFo
       return
     }
 
-    const hasErrors = Object.values(errors).some(err => !!err)
+    const hasErrors = Object.values(validation).some(v => !!v.error)
     if (hasErrors) {
       showError('Please fix validation errors before submitting')
       return
@@ -621,28 +634,39 @@ function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFo
           {specifications.map((spec: Specification) => (
             <div
               key={spec.id}
-              className="p-3 rounded-lg border transition-colors"
+              className="p-3 rounded-lg border transition-all duration-300"
               style={{
-                borderColor: errors[spec.testName] ? theme.colors.error : theme.colors.border,
-                backgroundColor: theme.colors.background
+                borderColor: validation[spec.testName]?.error 
+                  ? theme.colors.error 
+                  : validation[spec.testName]?.warning 
+                    ? '#EAB308' 
+                    : theme.colors.border,
+                backgroundColor: validation[spec.testName]?.warning ? 'rgba(234, 179, 8, 0.05)' : theme.colors.background
               }}
             >
               <div className="flex flex-col md:flex-row md:items-center gap-3">
                 <div className="flex-1">
-                  <label
-                    className="font-medium text-sm block mb-1"
-                    style={{ color: theme.colors.text }}
-                  >
-                    {spec.testName}
-                  </label>
+                  <div className="flex items-center gap-2 mb-1">
+                    <label
+                      className="font-medium text-sm block"
+                      style={{ color: theme.colors.text }}
+                    >
+                      {spec.testName}
+                    </label>
+                    {validation[spec.testName]?.warning && (
+                      <span className="text-[10px] font-bold uppercase text-yellow-600 bg-yellow-500/20 px-2 py-0.5 rounded-full">
+                        {validation[spec.testName]?.warning}
+                      </span>
+                    )}
+                  </div>
                   {spec.isNumerical && (
                     <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
                       Acceptable range: {spec.min} - {spec.max}
                     </p>
                   )}
-                  {errors[spec.testName] && (
+                  {validation[spec.testName]?.error && (
                     <p className="text-xs mt-1 animate-fadeIn" style={{ color: theme.colors.error }}>
-                      {errors[spec.testName]}
+                      {validation[spec.testName]?.error}
                     </p>
                   )}
                 </div>
@@ -652,7 +676,13 @@ function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFo
                     placeholder={spec.isNumerical ? `${spec.min} - ${spec.max}` : 'Enter result...'}
                     value={results[spec.testName] || ''}
                     onChange={(e) => handleChange(spec, e.target.value)}
-                    className={errors[spec.testName] ? 'border-red-500 focus:border-red-500' : ''}
+                    className={
+                      validation[spec.testName]?.error 
+                        ? 'border-red-500 focus:border-red-500' 
+                        : validation[spec.testName]?.warning 
+                          ? 'border-yellow-500 focus:border-yellow-500 shadow-[0_0_0_1px_rgba(234,179,8,0.2)]' 
+                          : ''
+                    }
                   />
                 </div>
               </div>
