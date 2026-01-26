@@ -15,15 +15,13 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "electron": "electron . --no-sandbox",
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "electron": "electron . --no-sandbox"
   },
   "dependencies": {
     "@tailwindcss/vite": "4.1.17",
     "@tanstack/react-query": "5.90.12",
     "axios": "1.13.2",
+    "electron": "40.0.0",
     "firebase": "12.6.0",
     "lucide-react": "0.555.0",
     "moment": "2.30.1",

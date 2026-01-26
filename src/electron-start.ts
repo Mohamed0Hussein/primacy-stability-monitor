@@ -1,38 +1,48 @@
- // electron-starter.js
- import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
- let mainWindow: BrowserWindow | null = null;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
- function createWindow() {
-   mainWindow = new BrowserWindow({
-     webPreferences: {
-       nodeIntegration: true, // Be cautious with nodeIntegration for security
-       contextIsolation: false, // Be cautious with contextIsolation for security
-     },
-     width: 1920,
-     height: 1080,
-   });
+let mainWindow: BrowserWindow | null = null;
 
-   // Load your React app (either from the dev server or the built files)
-   const startUrl = "http://localhost:5173";
-   mainWindow.loadURL(startUrl);
-   mainWindow.maximize();
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    webPreferences: {
+      nodeIntegration: true, // Be cautious with nodeIntegration for security
+      contextIsolation: false, // Be cautious with contextIsolation for security
+    },
+    width: 1920,
+    height: 1080,
+  });
 
-   mainWindow.on('closed', () => {
-     mainWindow = null;
-   });
- }
+  // Load your React app
+  if (app.isPackaged) {
+    // If packaged, load the built index.html from dist
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  } else {
+    // If in development, load from the Vite dev server
+    mainWindow.loadURL("http://localhost:5173");
+  }
 
- app.on('ready', createWindow);
+  mainWindow.maximize();
 
- app.on('window-all-closed', () => {
-   if (process.platform !== 'darwin') {
-     app.quit();
-   }
- });
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
 
- app.on('activate', () => {
-   if (mainWindow === null) {
-     createWindow();
-   }
- });
+app.on('ready', createWindow);
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
+});
