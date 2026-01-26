@@ -1,9 +1,15 @@
 {
   "name": "primacy-stability-monitor",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "src/electron-start.ts",
+  "author": "Mohamed0Hussein",
+  "description": "Stability Monitor Application for primacy laboratories",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mohamed0Hussein/primacy-stability-monitor.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -30,7 +36,6 @@
     "@typescript-eslint/eslint-plugin": "6.10.0",
     "@typescript-eslint/parser": "6.10.0",
     "@vitejs/plugin-react": "4.2.0",
-    "electron": "39.2.4",
     "eslint": "8.53.0",
     "eslint-plugin-react-hooks": "4.6.0",
     "eslint-plugin-react-refresh": "0.4.4",

@@ -1,10 +1,10 @@
 import React from 'react';
-import { LogOut, User, ArrowLeft, LayoutDashboard } from 'lucide-react';
+import { LogOut, User, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/auth-context';
 import { useTheme } from '../../hooks/useTheme';
 import { Button } from './Button';
 import { ThemeToggle } from './ThemeToggle';
-import { useNavigate, useLocation } from 'react-router';
+import { useNavigate, useLocation, Link } from 'react-router';
 import ROUTE_PATHS from '../../constants/route_paths';
 
 export const StatusBar: React.FC = () => {
@@ -41,22 +41,13 @@ export const StatusBar: React.FC = () => {
           <ArrowLeft size={16} style={{ color: theme.colors.text }} />
         </Button>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(ROUTE_PATHS.DASHBOARD)}
-          aria-label="Go to Dashboard"
-        >
-          <LayoutDashboard size={16} style={{ color: theme.colors.text }} />
-          <span style={{ color: theme.colors.text }}>Prime</span>
-        </Button>
-
-        <h1 
-          className="text-lg font-bold ml-2"
-          style={{ color: theme.colors.text }}
+        <Link 
+          to={ROUTE_PATHS.DASHBOARD}
+          className="text-lg font-bold ml-2 cursor-pointer hover:opacity-80 transition-opacity"
+          style={{ color: theme.colors.text, textDecoration: 'none' }}
         >
           Primacy Stability Monitor
-        </h1>
+        </Link>
       </div>
 
       <div className="flex items-center gap-4">

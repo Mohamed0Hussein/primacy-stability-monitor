@@ -207,7 +207,7 @@ const InsertNewProduct = () => {
   return (
     <>
       <div
-        className="min-h-screen p-6 flex justify-center pb-28"
+        className="flex-1 p-6 flex justify-center pb-28"
         style={{ backgroundColor: theme.colors.background }}
       >
         <div className="w-full max-w-5xl">

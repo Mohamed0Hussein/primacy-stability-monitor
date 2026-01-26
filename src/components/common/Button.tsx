@@ -9,6 +9,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
   isLoading?: boolean;
   children: React.ReactNode;
+  component?: React.ElementType;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -19,6 +20,7 @@ export const Button: React.FC<ButtonProps> = ({
   isLoading = false,
   disabled,
   className = '',
+  component,
   ...props
 }) => {
   const { theme } = useTheme();
@@ -35,8 +37,9 @@ export const Button: React.FC<ButtonProps> = ({
     ghost: `bg-transparent text-gray-600 hover:bg-gray-100 border border-transparent`,
   };
 
+  const Component = component || 'button';
   return (
-    <button
+    <Component
       className={`
         ${sizeClasses[size]}
         ${variantClasses[variant]}
@@ -66,6 +69,6 @@ export const Button: React.FC<ButtonProps> = ({
       ) : (
         children
       )}
-    </button>
+    </Component>
   );
 };
