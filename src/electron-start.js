@@ -1,11 +1,15 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { updateElectronApp } from 'update-electron-app';
+
+// Enable auto-updates via GitHub
+updateElectronApp();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let mainWindow: BrowserWindow | null = null;
+let mainWindow = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({

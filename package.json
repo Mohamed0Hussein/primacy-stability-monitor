@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "src/electron-start.ts",
+  "main": "src/electron-start.js",
   "author": "Mohamed0Hussein",
   "description": "Stability Monitor Application for primacy laboratories",
   "repository": {
@@ -31,13 +31,14 @@
           "name": "@electron-forge/maker-squirrel",
           "config": {
             "name": "primacy_stability_monitor",
-            "setupIcon": "assets/icon.png"
+            "setupIcon": "assets/icon.ico"
           }
         },
         {
           "name": "@electron-forge/maker-zip",
           "platforms": [
-            "darwin"
+            "darwin",
+            "win32"
           ]
         },
         {
@@ -64,7 +65,8 @@
     "react-dom": "19.2.3",
     "react-router": "7.9.6",
     "react-router-dom": "7.13.0",
-    "tailwindcss": "4.1.17"
+    "tailwindcss": "4.1.17",
+    "update-electron-app": "^3.1.2"
   },
   "devDependencies": {
     "@electron-forge/cli": "7.11.1",
