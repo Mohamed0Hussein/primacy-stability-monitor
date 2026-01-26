@@ -15,6 +15,7 @@ function createWindow() {
     },
     width: 1920,
     height: 1080,
+    icon: path.join(__dirname, '../assets/icon.png'),
   });
 
   // Load your React app
