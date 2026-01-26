@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 
 import { useTheme } from '../hooks/useTheme';
 import { useToast } from '../hooks/useToast';

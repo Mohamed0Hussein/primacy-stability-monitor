@@ -1,6 +1,6 @@
 // src/views/Dashboard.tsx
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import moment from 'moment';
 import { Calendar, FlaskConical, ArrowRight, Eye } from 'lucide-react';

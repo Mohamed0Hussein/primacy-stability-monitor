@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/auth-context';
 import { useTheme } from '../../hooks/useTheme';
 import { Button } from './Button';
 import { ThemeToggle } from './ThemeToggle';
-import { useNavigate, useLocation, Link } from 'react-router';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import ROUTE_PATHS from '../../constants/route_paths';
 
 export const StatusBar: React.FC = () => {

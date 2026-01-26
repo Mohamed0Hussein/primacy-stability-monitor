@@ -3,7 +3,7 @@ import ThemeProvider from './contexts/ThemeContext';
 import Login from './views/Login';
 import { ToastProvider } from './contexts/ToastProvider';
 import { QueryClientProvider,QueryClient } from "@tanstack/react-query"
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router'
+import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom'
 import ROUTE_PATHS from './constants/route_paths';
 import InsertNewProduct from './views/InsertNewProduct';
 import Dashboard from './views/Dashboard';
