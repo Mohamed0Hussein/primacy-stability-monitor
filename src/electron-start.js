@@ -2,6 +2,12 @@ import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { updateElectronApp } from 'update-electron-app';
+import squirrel from 'electron-squirrel-startup'
+
+
+if (squirrel) {
+  app.quit()
+}
 
 // Enable auto-updates via GitHub
 updateElectronApp();

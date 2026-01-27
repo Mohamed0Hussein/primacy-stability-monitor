@@ -1,5 +1,5 @@
 {
-  "name": "primacy-stability-monitor",
+  "name": "PrimacyStabilityMonitor",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -31,7 +31,10 @@
           "name": "@electron-forge/maker-squirrel",
           "config": {
             "name": "primacy_stability_monitor",
-            "setupIcon": "assets/icon.ico"
+            "setupIcon": "assets/icon.ico",
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "Primacy Stability Monitor"
           }
         },
         {
