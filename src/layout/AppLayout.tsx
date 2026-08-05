@@ -1,5 +1,6 @@
 import { StatusBar } from '../components/common/StatusBar'
 import { useTheme } from '../hooks/useTheme'
+import { UpdateNotifier } from '../components/UpdateNotifier'
 
 export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { theme } = useTheme()
@@ -16,6 +17,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
       <main className="flex-1 flex flex-col relative">
         {children}
       </main>
+      <UpdateNotifier />
     </div>
   )
 }

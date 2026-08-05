@@ -43,6 +43,9 @@ const packTypes = [
     "PVC/PE/PVDC - white",
     "ALU/ALU - white",
     "Glass bottle clear - white",
+    "Polyethylene  (HDPE) bottle white With Polypropylene cap white",
+    "Aluminum tube laminated",
+    "Polypropylene tube"
   ],
   [
     "Amber glass bottle",
@@ -91,8 +94,9 @@ const InsertNewProduct = () => {
     dosageForm: '',
     strength: '',
     packType: '',
-    conditions: [] as string[], // Changed to array
-
+    size: '',
+    conditions: [] as string[],
+    
     batchNumber: '',
     batchType: '',
     batchSize: '',
@@ -288,6 +292,12 @@ const InsertNewProduct = () => {
                         setData(d => ({ ...d, conditions: val }))
                       }}
                     />
+                  </Field>
+                  <Field label="Size" error={errors.size} theme={theme}>
+                    <Input
+                      value={data.size}
+                      onChange={e => setData(d => ({ ...d, size: e.target.value }))}
+                      placeholder="Enter size..." />
                   </Field>
                 </Grid>
               </Section>
