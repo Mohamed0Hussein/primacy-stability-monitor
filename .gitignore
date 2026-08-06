@@ -12,6 +12,8 @@ services/firebaseConfig
 node_modules
 dist
 dist-ssr
+release
+release-builds
 *.local
 
 # Editor directories and files
