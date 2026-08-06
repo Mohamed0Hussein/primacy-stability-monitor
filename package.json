@@ -16,55 +16,48 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "electron": "electron . --no-sandbox",
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "start": "electron . --no-sandbox",
+    "dist": "npm run build && electron-builder"
   },
-  "config": {
-    "forge": {
-      "packagerConfig": {
-        "icon": "assets/icon"
-      },
-      "rebuildConfig": {},
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "primacy_stability_monitor",
-            "setupIcon": "assets/icon.ico",
-            "createDesktopShortcut": true,
-            "createStartMenuShortcut": true,
-            "shortcutName": "Primacy Stability Monitor"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin",
-            "win32"
-          ]
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {}
-        }
+  "build": {
+    "appId": "com.primacy.stabilitymonitor",
+    "productName": "Primacy Stability Monitor",
+    "directories": {
+      "output": "release"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Mohamed0Hussein",
+        "repo": "primacy-stability-monitor"
+      }
+    ],
+    "files": [
+      "dist/**/*",
+      "src/electron-start.js",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "nsis"
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Primacy Stability Monitor"
     }
   },
   "dependencies": {
     "@tailwindcss/vite": "4.1.17",
     "@tanstack/react-query": "5.90.12",
     "axios": "1.13.2",
-<<<<<<< Updated upstream
-    "electron-squirrel-startup": "1.0.1",
+    "electron-updater": "^6.8.9",
     "firebase": "12.6.0",
-=======
-    "firebase": "^12.6.0",
->>>>>>> Stashed changes
     "lucide-react": "0.555.0",
     "moment": "2.30.1",
     "react": "19.2.3",
@@ -72,24 +65,16 @@
     "react-dom": "19.2.3",
     "react-router": "7.9.6",
     "react-router-dom": "7.13.0",
-    "tailwindcss": "4.1.17",
-    "update-electron-app": "^3.1.2"
+    "tailwindcss": "4.1.17"
   },
   "devDependencies": {
-    "@electron-forge/cli": "7.11.1",
-    "@electron-forge/maker-deb": "7.11.1",
-    "@electron-forge/maker-rpm": "7.11.1",
-    "@electron-forge/maker-squirrel": "7.11.1",
-    "@electron-forge/maker-zip": "7.11.1",
-    "@electron-forge/plugin-auto-unpack-natives": "7.11.1",
-    "@electron-forge/plugin-fuses": "7.11.1",
-    "@electron/fuses": "1.8.0",
     "@types/react": "18.2.37",
     "@types/react-dom": "18.2.15",
     "@typescript-eslint/eslint-plugin": "6.10.0",
     "@typescript-eslint/parser": "6.10.0",
     "@vitejs/plugin-react": "4.2.0",
     "electron": "33.0.2",
+    "electron-builder": "^26.15.3",
     "eslint": "8.53.0",
     "eslint-plugin-react-hooks": "4.6.0",
     "eslint-plugin-react-refresh": "0.4.4",

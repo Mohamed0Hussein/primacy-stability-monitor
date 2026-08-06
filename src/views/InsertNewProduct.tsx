@@ -297,7 +297,7 @@ const InsertNewProduct = () => {
                     <Input
                       value={data.size}
                       onChange={e => setData(d => ({ ...d, size: e.target.value }))}
-                      placeholder="Enter size..." />
+                      placeholder="Enter size in grams..." />
                   </Field>
                 </Grid>
               </Section>

@@ -1,16 +1,8 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { updateElectronApp } from 'update-electron-app';
-import squirrel from 'electron-squirrel-startup'
-
-
-if (squirrel) {
-  app.quit()
-}
-
-// Enable auto-updates via GitHub
-updateElectronApp();
+import pkg from 'electron-updater';
+const { autoUpdater } = pkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,7 +36,13 @@ function createWindow() {
   });
 }
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+  createWindow();
+
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
