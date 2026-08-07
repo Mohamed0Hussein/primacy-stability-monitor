@@ -12,8 +12,9 @@ let mainWindow = null;
 function createWindow() {
   mainWindow = new BrowserWindow({
     webPreferences: {
-      nodeIntegration: true, // Be cautious with nodeIntegration for security
-      contextIsolation: false, // Be cautious with contextIsolation for security
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
     width: 1920,
     height: 1080,

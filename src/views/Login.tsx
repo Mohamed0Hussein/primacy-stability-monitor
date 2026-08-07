@@ -9,9 +9,25 @@ import { useToast } from '../hooks/useToast';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { loginUser, registerUser } from '../utils/auth';
+import { loginUser, registerUser, resetPassword } from '../utils/auth';
 import { useAuth } from '../contexts/auth-context';
 import ROUTE_PATHS from '../constants/route_paths';
+
+const FIREBASE_ERRORS: Record<string, string> = {
+  'auth/user-not-found': 'No account with that email.',
+  'auth/wrong-password': 'Wrong password.',
+  'auth/invalid-credential': 'Wrong password.',
+  'auth/email-already-in-use': 'Email already registered.',
+  'auth/too-many-requests': 'Too many attempts. Try again later.',
+  'auth/invalid-email': 'Invalid email address.',
+  'auth/weak-password': 'Password too weak (min 6 characters).',
+  'auth/network-request-failed': 'Network error. Check your connection.',
+};
+
+function getAuthError(error: unknown): string {
+  const code = (error as { code?: string })?.code ?? '';
+  return FIREBASE_ERRORS[code] ?? 'Authentication failed. Please try again.';
+}
 
 export default function Login() {
   const { theme } = useTheme();
@@ -34,35 +50,43 @@ export default function Login() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { mutateAsync: login } = useMutation({ mutationFn:() => loginUser(formData.email, formData.password) })
-  const { mutateAsync: signup } = useMutation({ mutationFn:() => registerUser(formData.fullName, formData.email, formData.password, formData.phone) })
-  const { error : displayError } = useToast()
+  const { mutateAsync: login } = useMutation({ mutationFn: () => loginUser(formData.email, formData.password, rememberMe) });
+  const { mutateAsync: signup } = useMutation({ mutationFn: () => registerUser(formData.fullName, formData.email, formData.password, formData.phone) });
+  const { error: displayError, success: displaySuccess } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-  
+
     try {
-  
       if (isLogin) {
-        await login()
-  
-  
+        await login();
       } else {
         if (formData.password !== formData.confirmPassword) {
-          displayError("Passwords do not match");
+          displayError('Passwords do not match.');
           setIsLoading(false);
           return;
         }
-  
-        await signup() 
+        await signup();
       }
-    } catch (error ) {
-      console.error(error);
-      displayError("Authentication failed");
+    } catch (error) {
+      displayError(getAuthError(error));
     }
-  
+
     setIsLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!formData.email) {
+      displayError('Enter your email first.');
+      return;
+    }
+    try {
+      await resetPassword(formData.email);
+      displaySuccess('Password reset email sent.');
+    } catch (error) {
+      displayError(getAuthError(error));
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,7 +208,7 @@ export default function Login() {
                     </span>
                   </label>
                   
-                  <Button variant="ghost" type="button" size="sm">
+                  <Button variant="ghost" type="button" size="sm" onClick={handleForgotPassword}>
                     Forgot Password?
                   </Button>
                 </div>

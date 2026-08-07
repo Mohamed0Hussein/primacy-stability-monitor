@@ -5,17 +5,11 @@ import { auth } from "../services/firebaseConfig";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<object | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        currentUser.getIdToken().then(setAccessToken);
-      } else {
-        setAccessToken(null);
-      }
       setLoading(false);
     });
 
@@ -23,13 +17,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = async () => {
+    localStorage.removeItem("token");
     await auth.signOut();
     setUser(null);
-    setAccessToken(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, accessToken, setAccessToken, loading, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

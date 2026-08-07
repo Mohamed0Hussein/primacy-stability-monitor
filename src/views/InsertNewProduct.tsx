@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FlaskConical, Package, Calendar, ClipboardList, Plus, Trash2 } from 'lucide-react'
 import moment, { Moment } from 'moment'
 import { useMutation } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 
 import { useToast } from '../hooks/useToast'
 import { Card } from '../components/common/Card'
@@ -14,6 +15,7 @@ import Pick from '../components/common/PickInput'
 import { conditionDetails } from '../constants/stability_conditions'
 import { insertProduct } from '../utils/api/products'
 import { queryKeys } from '../constants/query_keys'
+import ROUTE_PATHS from '../constants/route_paths'
 
 const steps = ['Basic Info', 'Batch', 'Dates', 'Specifications']
 
@@ -63,14 +65,14 @@ const dosageForm = [
   "Syrup",
   "Oral solution",
   "Suspension",
-  "Emultion",
+  "Emulsion",
   "Injection",
   "Cream",
   "Ointment",
   "Gel",
   "Dry syrup",
-  "Poweder",
-  "Soft geltin capsule",
+  "Powder",
+  "Soft gelatin capsule",
 ]
 
 const baseTemperatures = [5, 25, 30, 40] as const
@@ -85,6 +87,7 @@ const conditionsOptions = baseTemperatures.flatMap(temp =>
 
 const InsertNewProduct = () => {
   const { theme } = useTheme()
+  const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState<Errors>({})
   const { success, error } = useToast()
@@ -121,10 +124,7 @@ const InsertNewProduct = () => {
 
   const { mutateAsync: insertProductMutation } = useMutation({
     mutationFn: insertProduct,
-    mutationKey: [queryKeys.insert_product, data],
-    onSuccess: () => {
-      success('Product inserted successfully')
-    },
+    mutationKey: [queryKeys.insert_product],
     onError: () => {
       error('Failed to insert product')
     },
@@ -165,24 +165,21 @@ const InsertNewProduct = () => {
     setStep(s => s + 1)
   }
 
-  const submit = () => {
+  const submit = async () => {
     if (!validateStep()) return
 
-    const selectedConditions = data.conditions;
     const tests: { condition: string; date: Moment }[] = [];
 
-    selectedConditions.forEach(condition => {
+    data.conditions.forEach(condition => {
       let datesForCondition: Moment[] = [];
 
       if (condition.includes('Accelerated')) {
-        // 1, 3, 6 months
         datesForCondition = [
           moment().add(1, 'months').startOf('day'),
           moment().add(3, 'months').startOf('day'),
-          moment().add(6, 'months').startOf('day')
+          moment().add(6, 'months').startOf('day'),
         ];
       } else if (condition.includes('Long-term')) {
-        // 3, 6, 9, 12, 18, 24, 36 months
         datesForCondition = [
           moment().add(3, 'months').startOf('day'),
           moment().add(6, 'months').startOf('day'),
@@ -190,21 +187,22 @@ const InsertNewProduct = () => {
           moment().add(12, 'months').startOf('day'),
           moment().add(18, 'months').startOf('day'),
           moment().add(24, 'months').startOf('day'),
-          moment().add(36, 'months').startOf('day')
+          moment().add(36, 'months').startOf('day'),
         ];
       }
 
-      datesForCondition.forEach(d => {
-        tests.push({ condition, date: d });
-      });
+      datesForCondition.forEach(d => tests.push({ condition, date: d }));
     });
 
-    // Sort tests by date
     tests.sort((a, b) => a.date.diff(b.date));
 
-    data.tests = tests;
-
-    insertProductMutation(data)
+    try {
+      await insertProductMutation({ ...data, tests });
+      success('Product inserted successfully');
+      navigate(ROUTE_PATHS.DASHBOARD);
+    } catch {
+      // onError handler shows toast
+    }
   }
 
 
@@ -508,7 +506,7 @@ const InsertNewProduct = () => {
                         }
 
                         const spec: Specification = {
-                          id: Math.random().toString(36).substr(2, 9),
+                          id: crypto.randomUUID(),
                           testName: newSpec.testName!,
                           isNumerical: newSpec.isNumerical!,
                           min: newSpec.min,
