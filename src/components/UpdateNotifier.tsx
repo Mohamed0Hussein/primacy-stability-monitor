@@ -7,31 +7,43 @@ import { Button } from './common/Button';
 import { Card } from './common/Card';
 import packageJson from '../../package.json';
 
+type Stage = { kind: 'available' | 'downloaded'; version: string }
+
 export const UpdateNotifier: React.FC = () => {
   const { theme } = useTheme();
   const { error: showError } = useToast();
-  const [downloadedVersion, setDownloadedVersion] = useState<string | null>(null);
-  const [installing, setInstalling] = useState(false);
+  const [stage, setStage] = useState<Stage | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const api = window.electronAPI;
     if (!api) return;
 
-    const offDownloaded = api.onUpdateDownloaded((info) => setDownloadedVersion(info.version));
+    const offAvailable = api.onUpdateAvailable((info) => setStage({ kind: 'available', version: info.version }));
+    const offDownloaded = api.onUpdateDownloaded((info) => setStage({ kind: 'downloaded', version: info.version }));
     const offError = api.onUpdateError((message) => showError(`Update check failed: ${message}`));
 
     return () => {
+      offAvailable();
       offDownloaded();
       offError();
     };
   }, [showError]);
 
-  if (!downloadedVersion) return null;
+  if (!stage) return null;
+
+  const handleDownload = async () => {
+    setBusy(true);
+    await window.electronAPI?.downloadUpdate();
+    setBusy(false);
+  };
 
   const handleInstall = async () => {
-    setInstalling(true);
+    setBusy(true);
     await window.electronAPI?.installUpdate();
   };
+
+  const isDownloaded = stage.kind === 'downloaded';
 
   return (
     <div
@@ -51,20 +63,28 @@ export const UpdateNotifier: React.FC = () => {
             <DownloadCloud size={28} />
           </div>
           <h3 className="text-lg font-semibold" style={{ color: theme.colors.text }}>
-            Update ready to install
+            {isDownloaded ? 'Update ready to install' : 'Update available'}
           </h3>
           <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
-            Version {downloadedVersion} has been downloaded (you're on {packageJson.version}).
-            Restart now to apply it.
+            {isDownloaded
+              ? `Version ${stage.version} has been downloaded (you're on ${packageJson.version}). Restart now to apply it.`
+              : `Version ${stage.version} is available (you're on ${packageJson.version}). Download it now?`}
           </p>
           <div className="flex gap-3 w-full mt-2">
-            <Button variant="ghost" fullWidth onClick={() => setDownloadedVersion(null)}>
+            <Button variant="ghost" fullWidth onClick={() => setStage(null)}>
               Later
             </Button>
-            <Button variant="primary" fullWidth isLoading={installing} onClick={handleInstall}>
-              <RotateCw size={16} />
-              Restart & Update
-            </Button>
+            {isDownloaded ? (
+              <Button variant="primary" fullWidth isLoading={busy} onClick={handleInstall}>
+                <RotateCw size={16} />
+                Restart & Update
+              </Button>
+            ) : (
+              <Button variant="primary" fullWidth isLoading={busy} onClick={handleDownload}>
+                <DownloadCloud size={16} />
+                Download
+              </Button>
+            )}
           </div>
         </div>
       </Card>

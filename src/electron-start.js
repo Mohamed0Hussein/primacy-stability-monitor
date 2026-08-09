@@ -7,7 +7,7 @@ const { autoUpdater } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-autoUpdater.autoDownload = true;
+autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
 
 let mainWindow = null;
@@ -26,6 +26,10 @@ autoUpdater.on('update-downloaded', (info) => {
 
 autoUpdater.on('error', (err) => {
   sendToRenderer('update:error', err?.message || 'Update check failed');
+});
+
+ipcMain.handle('update:download', () => {
+  return autoUpdater.downloadUpdate();
 });
 
 ipcMain.handle('update:install', () => {
