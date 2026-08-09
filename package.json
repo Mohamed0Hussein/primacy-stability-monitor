@@ -17,7 +17,8 @@
     "preview": "vite preview",
     "electron": "electron . --no-sandbox",
     "start": "electron . --no-sandbox",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "release": "npm run build && electron-builder --publish always"
   },
   "build": {
     "appId": "com.primacy.stabilitymonitor",
@@ -29,17 +30,13 @@
       {
         "provider": "github",
         "owner": "Mohamed0Hussein",
-        "repo": "primacy-stability-monitor",
-        "releaseType": "release",
-        "private": true
-
+        "repo": "primacy-stability-monitor"
       }
     ],
     "files": [
       "dist/**/*",
       "src/electron-start.js",
       "src/preload.js",
-      "src/update-token.json",
       "assets/**/*",
       "package.json"
     ],

@@ -1,6 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 import pkg from 'electron-updater';
 const { autoUpdater } = pkg;
@@ -10,17 +9,6 @@ const __dirname = path.dirname(__filename);
 
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = false;
-
-// primacy-stability-monitor is a private repo — a read-only PAT scoped to
-// just this repo lets the installed app read releases. See update-token.example.json.
-try {
-  const { token } = JSON.parse(fs.readFileSync(path.join(__dirname, 'update-token.json'), 'utf-8'));
-  if (token) {
-    autoUpdater.requestHeaders = { authorization: `token ${token}` };
-  }
-} catch {
-  // no token file — update checks will fail against the private repo until one is added
-}
 
 let mainWindow = null;
 
