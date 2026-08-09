@@ -9,6 +9,7 @@ lerna-debug.log*
 
 .env
 services/firebaseConfig
+src/update-token.json
 
 node_modules
 dist
