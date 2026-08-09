@@ -17,13 +17,14 @@ import { insertProduct } from '../utils/api/products'
 import { queryKeys } from '../constants/query_keys'
 import ROUTE_PATHS from '../constants/route_paths'
 
-const steps = ['Basic Info', 'Batch', 'Dates', 'Specifications']
+const steps = ['Basic Info', 'Batch', 'Dates', 'Tests/Specifications']
 
 type Errors = Partial<Record<string, string>>
 
 interface Specification {
   id: string
   testName: string
+  specification: string
   isNumerical: boolean
   min?: string
   max?: string
@@ -116,6 +117,7 @@ const InsertNewProduct = () => {
   // State for the new specification form
   const [newSpec, setNewSpec] = useState<Partial<Specification>>({
     testName: '',
+    specification: '',
     isNumerical: false,
     min: '',
     max: ''
@@ -414,7 +416,7 @@ const InsertNewProduct = () => {
             {step === 3 && (
               <Section
                 icon={<ClipboardList size={18} />}
-                title="Specifications (Tests)"
+                title="Tests/Specifications"
                 theme={theme}
               >
                 {/* List of added specifications */}
@@ -432,6 +434,11 @@ const InsertNewProduct = () => {
                     >
                       <div>
                         <div className="font-semibold" style={{ color: theme.colors.text }}>{spec.testName}</div>
+                        {spec.specification && (
+                          <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
+                            {spec.specification}
+                          </div>
+                        )}
                         <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
                           {spec.isNumerical
                             ? `Range: ${spec.min} - ${spec.max}` : ``}
@@ -449,7 +456,8 @@ const InsertNewProduct = () => {
 
                 {/* Add new specification form */}
                 <div className="p-4 rounded-lg border" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}>
-                  <h3 className="font-medium mb-4">Add New Specification</h3>
+                  <h3 className="font-medium mb-4">Add New Test/Specification</h3>
+
                   <Grid>
                     <Field label="Test name (e.g. Assay)" error={undefined} theme={theme}>
                       <Input
@@ -459,20 +467,29 @@ const InsertNewProduct = () => {
                       />
                     </Field>
 
-
-                    <div className="flex items-center gap-2 mt-6">
-                      <input
-                        type="checkbox"
-                        id="isNumerical"
-                        checked={newSpec.isNumerical}
-                        onChange={(e) => setNewSpec(s => ({ ...s, isNumerical: e.target.checked }))}
-                        className="w-4 h-4"
+                    <Field label="Test specification" error={undefined} theme={theme}>
+                      <Input
+                        value={newSpec.specification}
+                        onChange={(e) => setNewSpec(s => ({ ...s, specification: e.target.value }))}
+                        placeholder="e.g. 95.0% - 105.0% of label claim"
                       />
-                      <label htmlFor="isNumerical" style={{ color: theme.colors.text }}>Is Numerical?</label>
-                    </div>
+                    </Field>
+                  </Grid>
 
-                    {newSpec.isNumerical && (
-                      <>
+                  <div className="flex items-center gap-2 mt-4">
+                    <input
+                      type="checkbox"
+                      id="isNumerical"
+                      checked={newSpec.isNumerical}
+                      onChange={(e) => setNewSpec(s => ({ ...s, isNumerical: e.target.checked }))}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="isNumerical" style={{ color: theme.colors.text }}>Is Numerical?</label>
+                  </div>
+
+                  {newSpec.isNumerical && (
+                    <div className="mt-4">
+                      <Grid>
                         <Field label="Min Value" error={undefined} theme={theme}>
                           <Input
                             type="number"
@@ -489,15 +506,19 @@ const InsertNewProduct = () => {
                             placeholder="100"
                           />
                         </Field>
-                      </>
-                    )}
-                  </Grid>
+                      </Grid>
+                    </div>
+                  )}
                   <div className="mt-4 flex justify-end">
                     <Button
                       variant="primary"
                       onClick={() => {
                         if (!newSpec.testName) {
                           error("Test name is required")
+                          return
+                        }
+                        if (!newSpec.specification) {
+                          error("Test specification is required")
                           return
                         }
                         if (newSpec.isNumerical && (!newSpec.min || !newSpec.max)) {
@@ -508,13 +529,14 @@ const InsertNewProduct = () => {
                         const spec: Specification = {
                           id: crypto.randomUUID(),
                           testName: newSpec.testName!,
+                          specification: newSpec.specification!,
                           isNumerical: newSpec.isNumerical!,
                           min: newSpec.min,
                           max: newSpec.max
                         }
 
                         setData(d => ({ ...d, specifications: [...d.specifications, spec] }))
-                        setNewSpec({ testName: '', isNumerical: false, min: '', max: '' })
+                        setNewSpec({ testName: '', specification: '', isNumerical: false, min: '', max: '' })
                       }}
                     >
                       <Plus size={16} />
