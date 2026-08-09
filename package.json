@@ -1,7 +1,7 @@
 {
   "name": "PrimacyStabilityMonitor",
   "private": true,
-  "version": "1.1.4",
+  "version": "1.1.5",
   "type": "module",
   "main": "src/electron-start.js",
   "author": "Mohamed0Hussein",
@@ -26,13 +26,11 @@
     "directories": {
       "output": "release"
     },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "Mohamed0Hussein",
-        "repo": "primacy-stability-monitor"
-      }
-    ],
+    "publish": {
+      "provider": "github",
+      "owner": "Mohamed0Hussein",
+      "repo": "primacy-stability-monitor"
+    },
     "files": [
       "dist/**/*",
       "src/electron-start.js",
