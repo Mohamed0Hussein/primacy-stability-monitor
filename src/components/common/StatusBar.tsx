@@ -6,6 +6,7 @@ import { Button } from './Button';
 import { ThemeToggle } from './ThemeToggle';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import ROUTE_PATHS from '../../constants/route_paths';
+import packageJson from '../../../package.json';
 
 export const StatusBar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -41,13 +42,19 @@ export const StatusBar: React.FC = () => {
           <ArrowLeft size={16} style={{ color: theme.colors.text }} />
         </Button>
 
-        <Link 
+        <Link
           to={ROUTE_PATHS.DASHBOARD}
           className="text-lg font-bold ml-2 cursor-pointer hover:opacity-80 transition-opacity"
           style={{ color: theme.colors.text, textDecoration: 'none' }}
         >
           Primacy Stability Monitor
         </Link>
+        <span
+          className="text-xs font-mono px-1.5 py-0.5 rounded-md"
+          style={{ color: theme.colors.textSecondary, backgroundColor: theme.colors.surfaceVariant }}
+        >
+          v{packageJson.version}
+        </span>
       </div>
 
       <div className="flex items-center gap-4">
