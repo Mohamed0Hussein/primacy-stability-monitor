@@ -30,7 +30,8 @@
       {
         "provider": "github",
         "owner": "Mohamed0Hussein",
-        "repo": "primacy-stability-monitor"
+        "repo": "primacy-stability-monitor",
+        "releaseType": "release"
       }
     ],
     "files": [
