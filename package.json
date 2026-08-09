@@ -26,11 +26,13 @@
     "directories": {
       "output": "release"
     },
-    "publish": {
-      "provider": "github",
-      "owner": "Mohamed0Hussein",
-      "repo": "primacy-stability-monitor"
-    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Mohamed0Hussein",
+        "repo": "primacy-stability-monitor"
+      }
+    ],
     "files": [
       "dist/**/*",
       "src/electron-start.js",
