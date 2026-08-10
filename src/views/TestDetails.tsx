@@ -21,6 +21,7 @@ import { useToast } from '../hooks/useToast'
 import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
 import { Input } from '../components/common/Input'
+import Pick from '../components/common/PickInput'
 import { getProducts, addTestResult } from '../utils/api/products'
 import { queryKeys } from '../constants/query_keys'
 import ROUTE_PATHS from '../constants/route_paths'
@@ -45,6 +46,7 @@ interface Specification {
   isNumerical: boolean
   min?: string
   max?: string
+  unit?: string
 }
 
 interface Product {
@@ -536,12 +538,12 @@ function CompletedResultsView({ results, specifications }: { results: any[], spe
               </div>
               <div className="flex items-baseline gap-2">
                 <p className="text-lg font-bold" style={{ color: isOutOfLimits ? '#CA8A04' : theme.colors.primary }}>
-                  {value || 'N/A'}
+                  {value || 'N/A'} {spec.isNumerical ? (spec.unit || '') : ''}
                 </p>
               </div>
               {spec.isNumerical && (
                 <p className="text-[10px] mt-1" style={{ color: theme.colors.textSecondary }}>
-                  Limit: {spec.min} - {spec.max}
+                  Limit: {spec.min} - {spec.max} {spec.unit || ''}
                 </p>
               )}
             </div>
@@ -561,6 +563,8 @@ function CompletedResultsView({ results, specifications }: { results: any[], spe
   )
 }
 
+const NON_NUMERICAL_CHOICES = ['Confirm', 'Complies', 'Positive', 'Not Confirm', 'Not Complies', 'Not Positive', 'Other']
+
 interface TestResultFormProps {
   specifications: Specification[]
   onSubmit: (results: Record<string, string>) => void
@@ -570,8 +574,10 @@ interface TestResultFormProps {
 function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFormProps) {
   const { theme } = useTheme()
   const { error: showError } = useToast()
-  
+
   const [results, setResults] = useState<Record<string, string>>({})
+  const [choices, setChoices] = useState<Record<string, string>>({})
+  const [otherText, setOtherText] = useState<Record<string, string>>({})
   const [validation, setValidation] = useState<Record<string, { error: string | null, warning: string | null }>>({})
 
   const validateValue = (spec: Specification, value: string) => {
@@ -599,6 +605,21 @@ function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFo
       ...prev,
       [spec.testName]: result
     }))
+  }
+
+  const handleChoiceChange = (spec: Specification, choice: string) => {
+    setChoices(prev => ({ ...prev, [spec.testName]: choice }))
+
+    if (choice === 'Other') {
+      setResults(prev => ({ ...prev, [spec.testName]: otherText[spec.testName] || '' }))
+    } else {
+      setResults(prev => ({ ...prev, [spec.testName]: choice }))
+    }
+  }
+
+  const handleOtherTextChange = (spec: Specification, text: string) => {
+    setOtherText(prev => ({ ...prev, [spec.testName]: text }))
+    setResults(prev => ({ ...prev, [spec.testName]: text }))
   }
 
   const handleSubmit = () => {
@@ -661,7 +682,7 @@ function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFo
                   </div>
                   {spec.isNumerical && (
                     <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                      Acceptable range: {spec.min} - {spec.max}
+                      Acceptable range: {spec.min} - {spec.max} {spec.unit || ''}
                     </p>
                   )}
                   {validation[spec.testName]?.error && (
@@ -670,20 +691,39 @@ function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFo
                     </p>
                   )}
                 </div>
-                <div className="md:w-48">
-                  <Input
-                    type={spec.isNumerical ? 'number' : 'text'}
-                    placeholder={spec.isNumerical ? `${spec.min} - ${spec.max}` : 'Enter result...'}
-                    value={results[spec.testName] || ''}
-                    onChange={(e) => handleChange(spec, e.target.value)}
-                    className={
-                      validation[spec.testName]?.error 
-                        ? 'border-red-500 focus:border-red-500' 
-                        : validation[spec.testName]?.warning 
-                          ? 'border-yellow-500 focus:border-yellow-500 shadow-[0_0_0_1px_rgba(234,179,8,0.2)]' 
-                          : ''
-                    }
-                  />
+                <div className="md:w-56 space-y-2">
+                  {spec.isNumerical ? (
+                    <Input
+                      type="number"
+                      placeholder={`${spec.min} - ${spec.max}`}
+                      value={results[spec.testName] || ''}
+                      onChange={(e) => handleChange(spec, e.target.value)}
+                      className={
+                        validation[spec.testName]?.error
+                          ? 'border-red-500 focus:border-red-500'
+                          : validation[spec.testName]?.warning
+                            ? 'border-yellow-500 focus:border-yellow-500 shadow-[0_0_0_1px_rgba(234,179,8,0.2)]'
+                            : ''
+                      }
+                    />
+                  ) : (
+                    <>
+                      <Pick
+                        options={NON_NUMERICAL_CHOICES.map(c => ({ label: c, value: c }))}
+                        value={choices[spec.testName] || ''}
+                        placeholder="Select result..."
+                        onChange={(v) => handleChoiceChange(spec, Array.isArray(v) ? v[0] : v)}
+                      />
+                      {choices[spec.testName] === 'Other' && (
+                        <Input
+                          type="text"
+                          placeholder="Enter result..."
+                          value={otherText[spec.testName] || ''}
+                          onChange={(e) => handleOtherTextChange(spec, e.target.value)}
+                        />
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

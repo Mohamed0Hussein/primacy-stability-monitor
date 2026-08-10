@@ -25,10 +25,34 @@ interface Specification {
   id: string
   testName: string
   specification: string
+  reference: string
   isNumerical: boolean
   min?: string
   max?: string
+  unit?: string
 }
+
+interface Batch {
+  id: string
+  batchNumber: string
+  batchSize: string
+  apiBatchNumbers: string
+  manufacturingDate: Date | null
+  stabilityDate: Date | null
+  expiryDate: Date | null
+}
+
+const MAX_BATCHES = 4
+
+const createEmptyBatch = (): Batch => ({
+  id: crypto.randomUUID(),
+  batchNumber: '',
+  batchSize: '',
+  apiBatchNumbers: '',
+  manufacturingDate: null,
+  stabilityDate: null,
+  expiryDate: null,
+})
 
 const packTypes = [
   [
@@ -86,6 +110,12 @@ const conditionsOptions = baseTemperatures.flatMap(temp =>
   }))
 )
 
+const unitOptions = ['%', 'mg/ml', 'ppm', 'p/p', 'w/v', 'minute', 'g/ml', 'cfu/g', 'cfu/ml']
+  .sort()
+  .map(u => ({ label: u, value: u }))
+
+const referenceOptions = ['inhouse', 'aaa', 'bbb', 'ccc'].map(r => ({ label: r, value: r }))
+
 const InsertNewProduct = () => {
   const { theme } = useTheme()
   const navigate = useNavigate()
@@ -100,17 +130,10 @@ const InsertNewProduct = () => {
     packType: '',
     size: '',
     conditions: [] as string[],
-    
-    batchNumber: '',
+
     batchType: '',
-    batchSize: '',
-    apiBatchNumbers: '',
+    batches: [createEmptyBatch()] as Batch[],
 
-    manufacturingDate: null as Date | null,
-    stabilityDate: null as Date | null,
-    expiryDate: null as Date | null,
-
-    tests: [] as { condition: string, date: Moment }[],
     specifications: [] as Specification[]
   })
 
@@ -118,11 +141,24 @@ const InsertNewProduct = () => {
   const [newSpec, setNewSpec] = useState<Partial<Specification>>({
     testName: '',
     specification: '',
+    reference: '',
     isNumerical: false,
     min: '',
-    max: ''
+    max: '',
+    unit: '',
   })
 
+  const updateBatch = (id: string, patch: Partial<Batch>) => {
+    setData(d => ({ ...d, batches: d.batches.map(b => (b.id === id ? { ...b, ...patch } : b)) }))
+  }
+
+  const addBatch = () => {
+    setData(d => (d.batches.length >= MAX_BATCHES ? d : { ...d, batches: [...d.batches, createEmptyBatch()] }))
+  }
+
+  const removeBatch = (id: string) => {
+    setData(d => (d.batches.length <= 1 ? d : { ...d, batches: d.batches.filter(b => b.id !== id) }))
+  }
 
   const { mutateAsync: insertProductMutation } = useMutation({
     mutationFn: insertProduct,
@@ -146,16 +182,20 @@ const InsertNewProduct = () => {
     }
 
     if (step === 1) {
-      if (!data.batchNumber) e.batchNumber = 'Required'
       if (!data.batchType) e.batchType = 'Required'
-      if (!data.batchSize) e.batchSize = 'Required'
-      if (!data.apiBatchNumbers) e.apiBatchNumbers = 'Required'
+      data.batches.forEach(b => {
+        if (!b.batchNumber) e[`batchNumber_${b.id}`] = 'Required'
+        if (!b.batchSize) e[`batchSize_${b.id}`] = 'Required'
+        if (!b.apiBatchNumbers) e[`apiBatchNumbers_${b.id}`] = 'Required'
+      })
     }
 
     if (step === 2) {
-      if (!data.manufacturingDate) e.manufacturingDate = 'Required'
-      if (!data.stabilityDate) e.stabilityDate = 'Required'
-      if (!data.expiryDate) e.expiryDate = 'Required'
+      data.batches.forEach(b => {
+        if (!b.manufacturingDate) e[`manufacturingDate_${b.id}`] = 'Required'
+        if (!b.stabilityDate) e[`stabilityDate_${b.id}`] = 'Required'
+        if (!b.expiryDate) e[`expiryDate_${b.id}`] = 'Required'
+      })
     }
 
     setErrors(e)
@@ -167,9 +207,7 @@ const InsertNewProduct = () => {
     setStep(s => s + 1)
   }
 
-  const submit = async () => {
-    if (!validateStep()) return
-
+  const buildTests = () => {
     const tests: { condition: string; date: Moment }[] = [];
 
     data.conditions.forEach(condition => {
@@ -197,10 +235,37 @@ const InsertNewProduct = () => {
     });
 
     tests.sort((a, b) => a.date.diff(b.date));
+    return tests
+  }
+
+  const submit = async () => {
+    if (!validateStep()) return
+
+    const tests = buildTests();
 
     try {
-      await insertProductMutation({ ...data, tests });
-      success('Product inserted successfully');
+      await Promise.all(
+        data.batches.map(batch =>
+          insertProductMutation({
+            productName: data.productName,
+            dosageForm: data.dosageForm,
+            strength: data.strength,
+            packType: data.packType,
+            size: data.size,
+            conditions: data.conditions,
+            batchType: data.batchType,
+            batchNumber: batch.batchNumber,
+            batchSize: batch.batchSize,
+            apiBatchNumbers: batch.apiBatchNumbers,
+            manufacturingDate: batch.manufacturingDate,
+            stabilityDate: batch.stabilityDate,
+            expiryDate: batch.expiryDate,
+            tests,
+            specifications: data.specifications,
+          })
+        )
+      );
+      success(data.batches.length > 1 ? 'Batches inserted successfully' : 'Product inserted successfully');
       navigate(ROUTE_PATHS.DASHBOARD);
     } catch {
       // onError handler shows toast
@@ -310,15 +375,7 @@ const InsertNewProduct = () => {
                 title="Batch Information"
                 theme={theme}
               >
-                <Grid>
-                  <Field label="Batch number" error={errors.batchNumber} theme={theme}>
-                    <Input
-                      value={data.batchNumber}
-                      onChange={e =>
-                        setData(d => ({ ...d, batchNumber: e.target.value }))
-                      }
-                    />
-                  </Field>
+                <div className="mb-6 max-w-sm">
                   <Field label="Batch type" error={errors.batchType} theme={theme}>
                     <Input
                       value={data.batchType}
@@ -327,30 +384,59 @@ const InsertNewProduct = () => {
                       }
                     />
                   </Field>
-                  <Field label="Batch size" error={errors.batchSize} theme={theme}>
-                    <Input
-                      value={data.batchSize}
-                      onChange={e =>
-                        setData(d => ({ ...d, batchSize: e.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field
-                    label="Raw material batch numbers (API)"
-                    error={errors.apiBatchNumbers}
-                    theme={theme}
-                  >
-                    <Input
-                      value={data.apiBatchNumbers}
-                      onChange={e =>
-                        setData(d => ({
-                          ...d,
-                          apiBatchNumbers: e.target.value,
-                        }))
-                      }
-                    />
-                  </Field>
-                </Grid>
+                </div>
+
+                <div className="space-y-4">
+                  {data.batches.map((batch, i) => (
+                    <div
+                      key={batch.id}
+                      className="p-4 rounded-lg border"
+                      style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium" style={{ color: theme.colors.text }}>Batch {i + 1}</h4>
+                        {data.batches.length > 1 && (
+                          <Button variant="ghost" onClick={() => removeBatch(batch.id)}>
+                            <Trash2 size={16} className="text-red-500 cursor-pointer" />
+                          </Button>
+                        )}
+                      </div>
+                      <Grid>
+                        <Field label="Batch number" error={errors[`batchNumber_${batch.id}`]} theme={theme}>
+                          <Input
+                            value={batch.batchNumber}
+                            onChange={e => updateBatch(batch.id, { batchNumber: e.target.value })}
+                          />
+                        </Field>
+                        <Field label="Batch size" error={errors[`batchSize_${batch.id}`]} theme={theme}>
+                          <Input
+                            value={batch.batchSize}
+                            onChange={e => updateBatch(batch.id, { batchSize: e.target.value })}
+                          />
+                        </Field>
+                        <Field
+                          label="Raw material batch numbers (API)"
+                          error={errors[`apiBatchNumbers_${batch.id}`]}
+                          theme={theme}
+                        >
+                          <Input
+                            value={batch.apiBatchNumbers}
+                            onChange={e => updateBatch(batch.id, { apiBatchNumbers: e.target.value })}
+                          />
+                        </Field>
+                      </Grid>
+                    </div>
+                  ))}
+                </div>
+
+                {data.batches.length < MAX_BATCHES && (
+                  <div className="mt-4">
+                    <Button variant="ghost" onClick={addBatch}>
+                      <Plus size={16} />
+                      Add Batch ({data.batches.length}/{MAX_BATCHES})
+                    </Button>
+                  </div>
+                )}
               </Section>
             )}
 
@@ -361,54 +447,55 @@ const InsertNewProduct = () => {
                 title="Dates"
                 theme={theme}
               >
-                <Grid cols={3}>
-                  <Field
-                    label="Manufacturing date"
-                    error={errors.manufacturingDate}
-                    theme={theme}
-                  >
-                    <DatePickerInput
-                      label=""
-                      value={data.manufacturingDate}
-                      onChange={d =>
-                        setData(v => ({ ...v, manufacturingDate: d }))
-                      }
-                    />
-                  </Field>
+                <div className="space-y-4">
+                  {data.batches.map((batch, i) => (
+                    <div
+                      key={batch.id}
+                      className="p-4 rounded-lg border"
+                      style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}
+                    >
+                      <h4 className="font-medium mb-3" style={{ color: theme.colors.text }}>
+                        Batch {i + 1}{batch.batchNumber ? ` — ${batch.batchNumber}` : ''}
+                      </h4>
+                      <Grid cols={3}>
+                        <Field
+                          label="Manufacturing date"
+                          error={errors[`manufacturingDate_${batch.id}`]}
+                          theme={theme}
+                        >
+                          <DatePickerInput
+                            label=""
+                            value={batch.manufacturingDate}
+                            onChange={d => updateBatch(batch.id, { manufacturingDate: d })}
+                          />
+                        </Field>
 
-                  <Field
-                    label="Stability start date"
-                    error={errors.stabilityDate}
-                    theme={theme}
-                  >
-                    <DatePickerInput
-                      label=''
-                      value={data.stabilityDate}
-                      onChange={e =>
-                        setData(d => ({
-                          ...d,
-                          stabilityDate: e,
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field
-                    label='Expiry Date'
-                    error={errors.expiryDate}
-                    theme={theme}
-                  >
-                    <DatePickerInput
-                      label=''
-                      value={data.expiryDate}
-                      onChange={e =>
-                        setData(d => ({
-                          ...d,
-                          expiryDate: e,
-                        }))
-                      }
-                    />
-                  </Field>
-                </Grid>
+                        <Field
+                          label="Stability start date"
+                          error={errors[`stabilityDate_${batch.id}`]}
+                          theme={theme}
+                        >
+                          <DatePickerInput
+                            label=''
+                            value={batch.stabilityDate}
+                            onChange={d => updateBatch(batch.id, { stabilityDate: d })}
+                          />
+                        </Field>
+                        <Field
+                          label='Expiry Date'
+                          error={errors[`expiryDate_${batch.id}`]}
+                          theme={theme}
+                        >
+                          <DatePickerInput
+                            label=''
+                            value={batch.expiryDate}
+                            onChange={d => updateBatch(batch.id, { expiryDate: d })}
+                          />
+                        </Field>
+                      </Grid>
+                    </div>
+                  ))}
+                </div>
               </Section>
             )}
 
@@ -437,12 +524,14 @@ const InsertNewProduct = () => {
                         {spec.specification && (
                           <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
                             {spec.specification}
+                            {spec.reference ? ` · Ref: ${spec.reference}` : ''}
                           </div>
                         )}
-                        <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
-                          {spec.isNumerical
-                            ? `Range: ${spec.min} - ${spec.max}` : ``}
-                        </div>
+                        {spec.isNumerical && (
+                          <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
+                            Range: {spec.min} - {spec.max} {spec.unit || ''}
+                          </div>
+                        )}
                       </div>
                       <Button
                         variant="ghost"
@@ -458,7 +547,7 @@ const InsertNewProduct = () => {
                 <div className="p-4 rounded-lg border" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}>
                   <h3 className="font-medium mb-4">Add New Test/Specification</h3>
 
-                  <Grid>
+                  <Grid cols={3}>
                     <Field label="Test name (e.g. Assay)" error={undefined} theme={theme}>
                       <Input
                         value={newSpec.testName}
@@ -472,6 +561,15 @@ const InsertNewProduct = () => {
                         value={newSpec.specification}
                         onChange={(e) => setNewSpec(s => ({ ...s, specification: e.target.value }))}
                         placeholder="e.g. 95.0% - 105.0% of label claim"
+                      />
+                    </Field>
+
+                    <Field label="Specification reference" error={undefined} theme={theme}>
+                      <Pick
+                        options={referenceOptions}
+                        value={newSpec.reference ?? ''}
+                        placeholder="Select reference..."
+                        onChange={(e) => setNewSpec(s => ({ ...s, reference: Array.isArray(e) ? e[0] : e }))}
                       />
                     </Field>
                   </Grid>
@@ -489,7 +587,7 @@ const InsertNewProduct = () => {
 
                   {newSpec.isNumerical && (
                     <div className="mt-4">
-                      <Grid>
+                      <Grid cols={3}>
                         <Field label="Min Value" error={undefined} theme={theme}>
                           <Input
                             type="number"
@@ -504,6 +602,14 @@ const InsertNewProduct = () => {
                             value={newSpec.max}
                             onChange={(e) => setNewSpec(s => ({ ...s, max: e.target.value }))}
                             placeholder="100"
+                          />
+                        </Field>
+                        <Field label="Unit" error={undefined} theme={theme}>
+                          <Pick
+                            options={unitOptions}
+                            value={newSpec.unit ?? ''}
+                            placeholder="Select unit..."
+                            onChange={(e) => setNewSpec(s => ({ ...s, unit: Array.isArray(e) ? e[0] : e }))}
                           />
                         </Field>
                       </Grid>
@@ -530,13 +636,15 @@ const InsertNewProduct = () => {
                           id: crypto.randomUUID(),
                           testName: newSpec.testName!,
                           specification: newSpec.specification!,
+                          reference: newSpec.reference || '',
                           isNumerical: newSpec.isNumerical!,
                           min: newSpec.min,
-                          max: newSpec.max
+                          max: newSpec.max,
+                          unit: newSpec.unit || '',
                         }
 
                         setData(d => ({ ...d, specifications: [...d.specifications, spec] }))
-                        setNewSpec({ testName: '', specification: '', isNumerical: false, min: '', max: '' })
+                        setNewSpec({ testName: '', specification: '', reference: '', isNumerical: false, min: '', max: '', unit: '' })
                       }}
                     >
                       <Plus size={16} />
