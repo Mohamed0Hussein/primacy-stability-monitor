@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Check } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 
@@ -25,23 +26,50 @@ export default function Pick({
   disabled,
 }: PickProps) {
   const { theme } = useTheme()
-  const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null)
 
   const groups = Array.isArray(options[0])
     ? (options as Option[][])
     : [options as Option[]]
 
-  /* ✅ Click outside */
+  // Dropdown renders in a portal (not clipped by any ancestor's overflow:hidden,
+  // e.g. the collapsible test-result cards this sits inside on TestDetails)
+  const updatePosition = () => {
+    if (!triggerRef.current) return
+    const r = triggerRef.current.getBoundingClientRect()
+    setRect({ top: r.bottom + 4, left: r.left, width: r.width })
+  }
+
+  useLayoutEffect(() => {
+    if (open) updatePosition()
+  }, [open])
+
   useEffect(() => {
+    if (!open) return
+
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        triggerRef.current && !triggerRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         setOpen(false)
       }
     }
+    const reposition = () => updatePosition()
+
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
+    }
+  }, [open])
 
   const isSelected = (v: string) =>
     multiple
@@ -82,9 +110,9 @@ export default function Pick({
   }
 
   return (
-    <div ref={ref} className="relative">
-      {/* Trigger */}
+    <>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => setOpen(o => !o)}
@@ -97,8 +125,8 @@ export default function Pick({
         }}
       >
         <span className="truncate">{displayLabel()}</span>
-        <ChevronDown 
-          size={16} 
+        <ChevronDown
+          size={16}
           style={{
             transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s ease'
@@ -106,11 +134,14 @@ export default function Pick({
         />
       </button>
 
-      {/* Dropdown */}
-      {open && (
+      {open && rect && createPortal(
         <div
-          className="absolute z-50 mt-1 w-full rounded-md overflow-hidden"
+          ref={dropdownRef}
+          className="fixed z-50 rounded-md overflow-hidden"
           style={{
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
             backgroundColor: theme.colors.surface,
             border: `1px solid ${theme.colors.border}`,
             boxShadow: `0 10px 30px ${theme.colors.overlay}`,
@@ -157,12 +188,12 @@ export default function Pick({
                           }}
                         >
                           {active && (
-                            <Check 
-                              size={12} 
+                            <Check
+                              size={12}
                               strokeWidth={3}
-                              style={{ 
+                              style={{
                                 color: theme.name === 'dark' ? theme.colors.background : '#fff'
-                              }} 
+                              }}
                             />
                           )}
                         </div>
@@ -182,8 +213,9 @@ export default function Pick({
               </div>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }

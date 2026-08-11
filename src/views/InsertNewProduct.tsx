@@ -110,11 +110,15 @@ const conditionsOptions = baseTemperatures.flatMap(temp =>
   }))
 )
 
-const unitOptions = ['%', 'mg/ml', 'ppm', 'p/p', 'w/v', 'minute', 'g/ml', 'cfu/g', 'cfu/ml']
-  .sort()
-  .map(u => ({ label: u, value: u }))
+const unitOptions = [
+  { label: '—', value: '' },
+  ...['ppm', 'cfu/g', 'cfu/ml', 'absent', 'g/ml', '%', '%w/w', '%v/v', '%w/v', 'minute', 'mg/g','mg/ml', 'm.Pa.s', 'Pa.s', 'cP' ]
+    .sort()
+    .map(u => ({ label: u, value: u })),
+  { label: 'Other', value: 'Other' },
+]
 
-const referenceOptions = ['inhouse', 'aaa', 'bbb', 'ccc'].map(r => ({ label: r, value: r }))
+const referenceOptions = ['inhouse', 'USP', 'EP', 'Eur.ph'].map(r => ({ label: r, value: r }))
 
 const InsertNewProduct = () => {
   const { theme } = useTheme()
@@ -147,6 +151,7 @@ const InsertNewProduct = () => {
     max: '',
     unit: '',
   })
+  const [customUnit, setCustomUnit] = useState('')
 
   const updateBatch = (id: string, patch: Partial<Batch>) => {
     setData(d => ({ ...d, batches: d.batches.map(b => (b.id === id ? { ...b, ...patch } : b)) }))
@@ -521,10 +526,10 @@ const InsertNewProduct = () => {
                     >
                       <div>
                         <div className="font-semibold" style={{ color: theme.colors.text }}>{spec.testName}</div>
-                        {spec.specification && (
+                        {(spec.specification || spec.reference) && (
                           <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
                             {spec.specification}
-                            {spec.reference ? ` · Ref: ${spec.reference}` : ''}
+                            {spec.reference ? `${spec.specification ? ' · ' : ''}Ref: ${spec.reference}` : ''}
                           </div>
                         )}
                         {spec.isNumerical && (
@@ -547,7 +552,7 @@ const InsertNewProduct = () => {
                 <div className="p-4 rounded-lg border" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}>
                   <h3 className="font-medium mb-4">Add New Test/Specification</h3>
 
-                  <Grid cols={3}>
+                  <Grid cols={newSpec.isNumerical ? 2 : 3}>
                     <Field label="Test name (e.g. Assay)" error={undefined} theme={theme}>
                       <Input
                         value={newSpec.testName}
@@ -556,13 +561,15 @@ const InsertNewProduct = () => {
                       />
                     </Field>
 
-                    <Field label="Test specification" error={undefined} theme={theme}>
-                      <Input
-                        value={newSpec.specification}
-                        onChange={(e) => setNewSpec(s => ({ ...s, specification: e.target.value }))}
-                        placeholder="e.g. 95.0% - 105.0% of label claim"
-                      />
-                    </Field>
+                    {!newSpec.isNumerical && (
+                      <Field label="Test specification" error={undefined} theme={theme}>
+                        <Input
+                          value={newSpec.specification}
+                          onChange={(e) => setNewSpec(s => ({ ...s, specification: e.target.value }))}
+                          placeholder="e.g. 95.0% - 105.0% of label claim"
+                        />
+                      </Field>
+                    )}
 
                     <Field label="Specification reference" error={undefined} theme={theme}>
                       <Pick
@@ -582,7 +589,7 @@ const InsertNewProduct = () => {
                       onChange={(e) => setNewSpec(s => ({ ...s, isNumerical: e.target.checked }))}
                       className="w-4 h-4"
                     />
-                    <label htmlFor="isNumerical" style={{ color: theme.colors.text }}>Is Numerical?</label>
+                    <label htmlFor="isNumerical" style={{ color: theme.colors.text }}>Numerical?</label>
                   </div>
 
                   {newSpec.isNumerical && (
@@ -613,6 +620,17 @@ const InsertNewProduct = () => {
                           />
                         </Field>
                       </Grid>
+                      {newSpec.unit === 'Other' && (
+                        <div className="mt-4 max-w-xs">
+                          <Field label="Custom unit" error={undefined} theme={theme}>
+                            <Input
+                              value={customUnit}
+                              onChange={(e) => setCustomUnit(e.target.value)}
+                              placeholder="Enter unit..."
+                            />
+                          </Field>
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="mt-4 flex justify-end">
@@ -623,7 +641,7 @@ const InsertNewProduct = () => {
                           error("Test name is required")
                           return
                         }
-                        if (!newSpec.specification) {
+                        if (!newSpec.isNumerical && !newSpec.specification) {
                           error("Test specification is required")
                           return
                         }
@@ -631,20 +649,25 @@ const InsertNewProduct = () => {
                           error("Min and Max values are required for numerical specifications")
                           return
                         }
+                        if (newSpec.isNumerical && newSpec.unit === 'Other' && !customUnit) {
+                          error("Enter the custom unit")
+                          return
+                        }
 
                         const spec: Specification = {
                           id: crypto.randomUUID(),
                           testName: newSpec.testName!,
-                          specification: newSpec.specification!,
+                          specification: newSpec.isNumerical ? '' : newSpec.specification!,
                           reference: newSpec.reference || '',
                           isNumerical: newSpec.isNumerical!,
                           min: newSpec.min,
                           max: newSpec.max,
-                          unit: newSpec.unit || '',
+                          unit: newSpec.unit === 'Other' ? customUnit : (newSpec.unit || ''),
                         }
 
                         setData(d => ({ ...d, specifications: [...d.specifications, spec] }))
                         setNewSpec({ testName: '', specification: '', reference: '', isNumerical: false, min: '', max: '', unit: '' })
+                        setCustomUnit('')
                       }}
                     >
                       <Plus size={16} />
