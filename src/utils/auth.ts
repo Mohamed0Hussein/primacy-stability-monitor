@@ -15,14 +15,46 @@ export async function registerUser(
   password: string,
   phone: string
 ) {
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  let credential;
+  let justCreated = false;
+
+  try {
+    credential = await createUserWithEmailAndPassword(auth, email, password);
+    justCreated = true;
+  } catch (error) {
+    const code = (error as { code?: string })?.code;
+    if (code !== "auth/email-already-in-use") throw error;
+
+    // Could be someone else's account, or an orphan left behind by a
+    // previously-failed signup (Firebase account created, but the backend
+    // call after it never completed — e.g. a DB outage). If these exact
+    // credentials sign in, it's the latter: recover by finishing the
+    // backend registration instead of leaving the user stuck forever.
+    try {
+      credential = await signInWithEmailAndPassword(auth, email, password);
+    } catch {
+      throw error; // not their account — surface the original "in use" error
+    }
+  }
 
   try {
     const user = await RegisterUser({ fullName, email, phone, password });
     return user;
-  } catch (error) {
-    await credential.user.delete();
-    throw error;
+  } catch (backendError) {
+    if (justCreated) {
+      // Roll back the Firebase account we just created so a retry isn't
+      // permanently blocked by "email already in use". Best-effort: if this
+      // itself fails, the recovery path above picks it up on the next attempt.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await credential.user.delete();
+          break;
+        } catch {
+          // swallow — never let a rollback failure mask the real error below
+        }
+      }
+    }
+    throw backendError;
   }
 }
 

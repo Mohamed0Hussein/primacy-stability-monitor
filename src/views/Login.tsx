@@ -14,19 +14,43 @@ import { useAuth } from '../contexts/auth-context';
 import ROUTE_PATHS from '../constants/route_paths';
 
 const FIREBASE_ERRORS: Record<string, string> = {
-  'auth/user-not-found': 'No account with that email.',
-  'auth/wrong-password': 'Wrong password.',
-  'auth/invalid-credential': 'Wrong password.',
-  'auth/email-already-in-use': 'Email already registered.',
-  'auth/too-many-requests': 'Too many attempts. Try again later.',
-  'auth/invalid-email': 'Invalid email address.',
-  'auth/weak-password': 'Password too weak (min 6 characters).',
-  'auth/network-request-failed': 'Network error. Check your connection.',
+  'auth/user-not-found': 'No account found with that email address.',
+  'auth/wrong-password': 'Incorrect password. Please try again.',
+  'auth/invalid-credential': 'Incorrect email or password.',
+  'auth/email-already-in-use': 'That email is already registered — try signing in instead.',
+  'auth/too-many-requests': 'Too many failed attempts. Please wait a bit before trying again.',
+  'auth/invalid-email': 'That doesn\'t look like a valid email address.',
+  'auth/weak-password': 'Password is too weak — use at least 6 characters.',
+  'auth/network-request-failed': 'Network error — check your internet connection and try again.',
+  'auth/user-disabled': 'This account has been disabled. Contact support for help.',
+  'auth/missing-password': 'Please enter your password.',
 };
 
+// Surfaces the real reason a request failed instead of a generic message:
+// Firebase errors carry a `code`, backend errors carry a response body
+// (either a single message, or a list of Zod validation issues).
 function getAuthError(error: unknown): string {
-  const code = (error as { code?: string })?.code ?? '';
-  return FIREBASE_ERRORS[code] ?? 'Authentication failed. Please try again.';
+  const firebaseCode = (error as { code?: string })?.code;
+  if (firebaseCode) {
+    return FIREBASE_ERRORS[firebaseCode] ?? `Authentication failed (${firebaseCode}).`;
+  }
+
+  const responseData = (error as {
+    response?: { data?: { message?: string; errors?: { message: string }[] } };
+  })?.response?.data;
+
+  if (responseData?.errors?.length) {
+    return responseData.errors.map(e => e.message).join(' ');
+  }
+  if (responseData?.message) {
+    return responseData.message;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return 'Something went wrong. Please try again.';
 }
 
 export default function Login() {
@@ -61,13 +85,20 @@ export default function Login() {
     try {
       if (isLogin) {
         await login();
+        displaySuccess('Welcome back! Signing you in…');
       } else {
         if (formData.password !== formData.confirmPassword) {
-          displayError('Passwords do not match.');
+          displayError('Those passwords don\'t match — please re-enter them.');
+          setIsLoading(false);
+          return;
+        }
+        if (formData.password.length < 6) {
+          displayError('Password must be at least 6 characters.');
           setIsLoading(false);
           return;
         }
         await signup();
+        displaySuccess('Account created! Welcome aboard.');
       }
     } catch (error) {
       displayError(getAuthError(error));
