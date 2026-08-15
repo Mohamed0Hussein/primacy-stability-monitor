@@ -63,7 +63,7 @@ export async function loginUser(email: string, password: string, rememberMe = fa
   // Firebase's onAuthStateChanged fires almost immediately after signInWithEmailAndPassword
   // and triggers navigation to the dashboard, which fires an authenticated request. If that
   // happens before the token is stored, it 401s and gets treated as a logout.
-  const user = await LoginUser(email, password);
+  const user = await LoginUser(email, password, rememberMe);
   await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
   await signInWithEmailAndPassword(auth, email, password);
   return user;

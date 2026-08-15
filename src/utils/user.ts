@@ -11,8 +11,8 @@ export async function RegisterUser(data: {
   return res.data.user;
 }
 
-export async function LoginUser(email: string, password: string) {
-  const res = await axios.post("/auth/login", { email, password });
+export async function LoginUser(email: string, password: string, rememberMe = false) {
+  const res = await axios.post("/auth/login", { email, password, rememberMe });
   localStorage.setItem("token", res.data.token);
   return res.data.user;
 }

@@ -61,6 +61,16 @@ interface Product {
   specifications?: Specification[]
 }
 
+// For a % spec, a limit of 0 means "no limit on that side" rather than a
+// literal 0% bound — "0 - 5%" reads as a range, but it's really a ceiling.
+function formatRange(min: string | undefined, max: string | undefined, unit: string | undefined) {
+  if (unit === '%') {
+    if (min === '0' && max) return `no more than ${max}%`
+    if (max === '0' && min) return `no less than ${min}%`
+  }
+  return `${min} - ${max} ${unit || ''}`.trim()
+}
+
 export default function TestDetails() {
   const { theme } = useTheme()
   const { productId } = useParams<{ productId: string }>()
@@ -543,7 +553,7 @@ function CompletedResultsView({ results, specifications }: { results: any[], spe
               </div>
               {spec.isNumerical && (
                 <p className="text-[10px] mt-1" style={{ color: theme.colors.textSecondary }}>
-                  Limit: {spec.min} - {spec.max} {spec.unit || ''}
+                  Limit: {formatRange(spec.min, spec.max, spec.unit)}
                 </p>
               )}
             </div>
@@ -682,7 +692,7 @@ function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFo
                   </div>
                   {spec.isNumerical && (
                     <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                      Acceptable range: {spec.min} - {spec.max} {spec.unit || ''}
+                      Acceptable range: {formatRange(spec.min, spec.max, spec.unit)}
                     </p>
                   )}
                   {validation[spec.testName]?.error && (
