@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import moment from 'moment';
-import { Calendar, FlaskConical, ArrowRight, Eye } from 'lucide-react';
+import { Calendar, FlaskConical, ArrowRight, Eye, Boxes } from 'lucide-react';
 
 import { useTheme } from '../hooks/useTheme';
 import { Button } from '../components/common/Button';
@@ -102,8 +102,8 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Stats / Navigation Cards - Optional but nice for "buttons to take user..." request */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card
                 className="p-6 cursor-pointer hover:shadow-lg transition-all group"
                 onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}
             >
@@ -116,6 +116,22 @@ export default function Dashboard() {
                         <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Register a new product batch</p>
                     </div>
                     <ArrowRight className="text-gray-300 group-hover:text-indigo-500 transition-colors" />
+                </div>
+            </Card>
+
+            <Card
+                className="p-6 cursor-pointer hover:shadow-lg transition-all group"
+                onClick={() => navigate(ROUTE_PATHS.PRODUCTS)}
+            >
+                <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-500">
+                        <Boxes size={24} />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>View Products</h3>
+                        <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Browse products and their IDs</p>
+                    </div>
+                    <ArrowRight className="text-gray-300 group-hover:text-purple-500 transition-colors" />
                 </div>
             </Card>
 
