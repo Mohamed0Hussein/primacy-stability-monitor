@@ -2,7 +2,7 @@
 
 A Windows desktop application for managing pharmaceutical stability testing programs. Lab staff register a drug product batch — dosage form, strength, pack type, and ICH storage conditions (accelerated / long-term at 5°C, 25°C, 30°C, 40°C) — and the app automatically generates the schedule of future withdrawal/test dates. Technicians later record test results against defined specifications, with automatic pass/out-of-limits validation.
 
-Built with React, TypeScript, and Electron, backed by a companion [Express/MongoDB API](https://github.com/Mohamed0Hussein/primacy-backend).
+Built with React, TypeScript, and Electron, backed by a companion Express/MongoDB API (private repository).
 
 ## Features
 
@@ -24,7 +24,7 @@ Built with React, TypeScript, and Electron, backed by a companion [Express/Mongo
 | Data | TanStack Query 5, Axios |
 | Desktop shell | Electron 33, electron-builder (NSIS installer), electron-updater |
 | Auth | Firebase Authentication (identity) + backend-issued JWT (API authorization) |
-| Backend | Node.js, Express, MongoDB/Mongoose ([separate repo](https://github.com/Mohamed0Hussein/primacy-backend)) |
+| Backend | Node.js, Express, MongoDB/Mongoose (separate, private repository) |
 
 ## Getting started
 
@@ -32,7 +32,7 @@ Built with React, TypeScript, and Electron, backed by a companion [Express/Mongo
 
 - Node.js 18+
 - A Firebase project with Email/Password authentication enabled
-- Access to the [backend API](https://github.com/Mohamed0Hussein/primacy-backend) (the app talks to a deployed instance by default — see `src/utils/axios.ts`)
+- Access to the backend API (the app talks to a deployed instance by default — see `src/utils/axios.ts`)
 
 ### Setup
 
