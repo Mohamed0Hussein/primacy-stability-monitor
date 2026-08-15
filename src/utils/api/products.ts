@@ -11,3 +11,7 @@ export const getProducts = () => {
 export const addTestResult = (productId: string, testId: string, results: object) => {
     return axios.post(`/substances/${productId}/tests/${testId}/results`, results)
 }
+
+export const updateProduct = (productId: string, updates: object) => {
+    return axios.put(`/substances/${productId}`, updates)
+}

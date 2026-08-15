@@ -12,6 +12,10 @@ import { DatePickerInput } from '../components/common/DatePickerInput'
 import { useTheme } from '../hooks/useTheme'
 import { Theme } from '../themes/themes'
 import Pick from '../components/common/PickInput'
+import { Grid, Field } from '../components/common/FormLayout'
+import { SpecificationForm } from '../components/specifications/SpecificationForm'
+import { SpecificationList } from '../components/specifications/SpecificationList'
+import { Specification } from '../constants/specifications'
 import { conditionDetails } from '../constants/stability_conditions'
 import { insertProduct } from '../utils/api/products'
 import { queryKeys } from '../constants/query_keys'
@@ -20,17 +24,6 @@ import ROUTE_PATHS from '../constants/route_paths'
 const steps = ['Basic Info', 'Batch', 'Dates', 'Tests/Specifications']
 
 type Errors = Partial<Record<string, string>>
-
-interface Specification {
-  id: string
-  testName: string
-  specification: string
-  reference: string
-  isNumerical: boolean
-  min?: string
-  max?: string
-  unit?: string
-}
 
 interface Batch {
   id: string
@@ -110,16 +103,6 @@ const conditionsOptions = baseTemperatures.flatMap(temp =>
   }))
 )
 
-const unitOptions = [
-  { label: '—', value: '' },
-  ...['ppm', 'cfu/g', 'cfu/ml', 'absent', 'g/ml', '%', '%w/w', '%v/v', '%w/v', 'minute', 'mg/g','mg/ml', 'm.Pa.s', 'Pa.s', 'cP' ]
-    .sort()
-    .map(u => ({ label: u, value: u })),
-  { label: 'Other', value: 'Other' },
-]
-
-const referenceOptions = ['inhouse', 'USP', 'EP', 'Eur.ph'].map(r => ({ label: r, value: r }))
-
 const InsertNewProduct = () => {
   const { theme } = useTheme()
   const navigate = useNavigate()
@@ -140,18 +123,6 @@ const InsertNewProduct = () => {
 
     specifications: [] as Specification[]
   })
-
-  // State for the new specification form
-  const [newSpec, setNewSpec] = useState<Partial<Specification>>({
-    testName: '',
-    specification: '',
-    reference: '',
-    isNumerical: false,
-    min: '',
-    max: '',
-    unit: '',
-  })
-  const [customUnit, setCustomUnit] = useState('')
 
   const updateBatch = (id: string, patch: Partial<Batch>) => {
     setData(d => ({ ...d, batches: d.batches.map(b => (b.id === id ? { ...b, ...patch } : b)) }))
@@ -512,169 +483,16 @@ const InsertNewProduct = () => {
                 theme={theme}
               >
                 {/* List of added specifications */}
-                <div className="space-y-3 mb-6">
-                  {data.specifications.length === 0 && (
-                    <div className="text-center py-6 border-2 border-dashed rounded-lg opacity-60" style={{ borderColor: theme.colors.border }}>
-                      <p>No specifications added yet.</p>
-                    </div>
-                  )}
-                  {data.specifications.map((spec) => (
-                    <div
-                      key={spec.id}
-                      className="p-3 rounded-lg flex items-center justify-between border"
-                      style={{ backgroundColor: theme.colors.background, borderColor: theme.colors.border }}
-                    >
-                      <div>
-                        <div className="font-semibold" style={{ color: theme.colors.text }}>{spec.testName}</div>
-                        {(spec.specification || spec.reference) && (
-                          <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
-                            {spec.specification}
-                            {spec.reference ? `${spec.specification ? ' · ' : ''}Ref: ${spec.reference}` : ''}
-                          </div>
-                        )}
-                        {spec.isNumerical && (
-                          <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
-                            Range: {spec.min} - {spec.max} {spec.unit || ''}
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setData(d => ({ ...d, specifications: d.specifications.filter(s => s.id !== spec.id) }))}
-                      >
-                        <Trash2 size={16} className="text-red-500 cursor-pointer" />
-                      </Button>
-                    </div>
-                  ))}
+                <div className="mb-6">
+                  <SpecificationList
+                    specifications={data.specifications}
+                    onRemove={(id) => setData(d => ({ ...d, specifications: d.specifications.filter(s => s.id !== id) }))}
+                  />
                 </div>
 
-                {/* Add new specification form */}
-                <div className="p-4 rounded-lg border" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}>
-                  <h3 className="font-medium mb-4">Add New Test/Specification</h3>
-
-                  <Grid cols={newSpec.isNumerical ? 2 : 3}>
-                    <Field label="Test name (e.g. Assay)" error={undefined} theme={theme}>
-                      <Input
-                        value={newSpec.testName}
-                        onChange={(e) => setNewSpec(s => ({ ...s, testName: e.target.value }))}
-                        placeholder="Name"
-                      />
-                    </Field>
-
-                    {!newSpec.isNumerical && (
-                      <Field label="Test specification" error={undefined} theme={theme}>
-                        <Input
-                          value={newSpec.specification}
-                          onChange={(e) => setNewSpec(s => ({ ...s, specification: e.target.value }))}
-                          placeholder="e.g. 95.0% - 105.0% of label claim"
-                        />
-                      </Field>
-                    )}
-
-                    <Field label="Specification reference" error={undefined} theme={theme}>
-                      <Pick
-                        options={referenceOptions}
-                        value={newSpec.reference ?? ''}
-                        placeholder="Select reference..."
-                        onChange={(e) => setNewSpec(s => ({ ...s, reference: Array.isArray(e) ? e[0] : e }))}
-                      />
-                    </Field>
-                  </Grid>
-
-                  <div className="flex items-center gap-2 mt-4">
-                    <input
-                      type="checkbox"
-                      id="isNumerical"
-                      checked={newSpec.isNumerical}
-                      onChange={(e) => setNewSpec(s => ({ ...s, isNumerical: e.target.checked }))}
-                      className="w-4 h-4"
-                    />
-                    <label htmlFor="isNumerical" style={{ color: theme.colors.text }}>Numerical?</label>
-                  </div>
-
-                  {newSpec.isNumerical && (
-                    <div className="mt-4">
-                      <Grid cols={3}>
-                        <Field label="Min Value" error={undefined} theme={theme}>
-                          <Input
-                            type="number"
-                            value={newSpec.min}
-                            onChange={(e) => setNewSpec(s => ({ ...s, min: e.target.value }))}
-                            placeholder="0"
-                          />
-                        </Field>
-                        <Field label="Max Value" error={undefined} theme={theme}>
-                          <Input
-                            type="number"
-                            value={newSpec.max}
-                            onChange={(e) => setNewSpec(s => ({ ...s, max: e.target.value }))}
-                            placeholder="100"
-                          />
-                        </Field>
-                        <Field label="Unit" error={undefined} theme={theme}>
-                          <Pick
-                            options={unitOptions}
-                            value={newSpec.unit ?? ''}
-                            placeholder="Select unit..."
-                            onChange={(e) => setNewSpec(s => ({ ...s, unit: Array.isArray(e) ? e[0] : e }))}
-                          />
-                        </Field>
-                      </Grid>
-                      {newSpec.unit === 'Other' && (
-                        <div className="mt-4 max-w-xs">
-                          <Field label="Custom unit" error={undefined} theme={theme}>
-                            <Input
-                              value={customUnit}
-                              onChange={(e) => setCustomUnit(e.target.value)}
-                              placeholder="Enter unit..."
-                            />
-                          </Field>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="mt-4 flex justify-end">
-                    <Button
-                      variant="primary"
-                      onClick={() => {
-                        if (!newSpec.testName) {
-                          error("Test name is required")
-                          return
-                        }
-                        if (!newSpec.isNumerical && !newSpec.specification) {
-                          error("Test specification is required")
-                          return
-                        }
-                        if (newSpec.isNumerical && (!newSpec.min || !newSpec.max)) {
-                          error("Min and Max values are required for numerical specifications")
-                          return
-                        }
-                        if (newSpec.isNumerical && newSpec.unit === 'Other' && !customUnit) {
-                          error("Enter the custom unit")
-                          return
-                        }
-
-                        const spec: Specification = {
-                          id: crypto.randomUUID(),
-                          testName: newSpec.testName!,
-                          specification: newSpec.isNumerical ? '' : newSpec.specification!,
-                          reference: newSpec.reference || '',
-                          isNumerical: newSpec.isNumerical!,
-                          min: newSpec.min,
-                          max: newSpec.max,
-                          unit: newSpec.unit === 'Other' ? customUnit : (newSpec.unit || ''),
-                        }
-
-                        setData(d => ({ ...d, specifications: [...d.specifications, spec] }))
-                        setNewSpec({ testName: '', specification: '', reference: '', isNumerical: false, min: '', max: '', unit: '' })
-                        setCustomUnit('')
-                      }}
-                    >
-                      <Plus size={16} />
-                      Add Specification
-                    </Button>
-                  </div>
-                </div>
+                <SpecificationForm
+                  onAdd={(spec) => setData(d => ({ ...d, specifications: [...d.specifications, spec] }))}
+                />
               </Section>
             )}
           </Card>
@@ -726,45 +544,5 @@ const Section = ({ icon, title, children, theme }: { icon: React.ReactNode, titl
     {children}
   </section>
 )
-
-const Grid = ({
-  cols = 2,
-  children,
-}: {
-  cols?: number
-  children: React.ReactNode
-}) => {
-  const colsClass =
-    cols === 3
-      ? 'md:grid-cols-3'
-      : cols === 1
-        ? 'md:grid-cols-1'
-        : 'md:grid-cols-2'
-
-  return (
-    <div className={`grid grid-cols-1 ${colsClass} gap-4`}>
-      {children}
-    </div>
-  )
-}
-
-
-const Field = ({ label, error, children, theme }: { label: string, error: string | undefined, children: React.ReactNode, theme: Theme }) => (
-  <div className="space-y-1">
-    <label
-      className="text-sm font-medium"
-      style={{ color: theme.colors.textSecondary }}
-    >
-      {label}
-    </label>
-    {children}
-    {error && (
-      <p className="text-xs" style={{ color: theme.colors.error }}>
-        {error}
-      </p>
-    )}
-  </div>
-)
-
 
 export default InsertNewProduct
