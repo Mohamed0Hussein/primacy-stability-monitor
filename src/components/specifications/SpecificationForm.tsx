@@ -12,6 +12,7 @@ import { Specification, unitOptions, referenceOptions } from '../../constants/sp
 interface SpecificationFormProps {
   onAdd: (spec: Specification) => void
   submitLabel?: string
+  isSubmitting?: boolean
 }
 
 const emptyNewSpec: Partial<Specification> = {
@@ -24,7 +25,7 @@ const emptyNewSpec: Partial<Specification> = {
   unit: '',
 }
 
-export function SpecificationForm({ onAdd, submitLabel = 'Add Specification' }: SpecificationFormProps) {
+export function SpecificationForm({ onAdd, submitLabel = 'Add Specification', isSubmitting = false }: SpecificationFormProps) {
   const { theme } = useTheme()
   const { error } = useToast()
   const [newSpec, setNewSpec] = useState<Partial<Specification>>(emptyNewSpec)
@@ -150,7 +151,7 @@ export function SpecificationForm({ onAdd, submitLabel = 'Add Specification' }: 
         </div>
       )}
       <div className="mt-4 flex justify-end">
-        <Button variant="primary" onClick={handleAdd}>
+        <Button variant="primary" onClick={handleAdd} isLoading={isSubmitting}>
           <Plus size={16} />
           {submitLabel}
         </Button>

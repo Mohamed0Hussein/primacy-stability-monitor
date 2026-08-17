@@ -212,7 +212,7 @@ export default function Products() {
               <div className="mb-4">
                 <SpecificationList specifications={selectedProduct.specifications || []} />
               </div>
-              <SpecificationForm onAdd={handleAddSpecification} submitLabel="Add to Product" />
+              <SpecificationForm onAdd={handleAddSpecification} submitLabel="Add to Product" isSubmitting={updateMutation.isPending} />
             </DetailSection>
           </div>
         )}

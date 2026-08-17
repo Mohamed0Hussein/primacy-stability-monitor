@@ -135,17 +135,21 @@ export default function Dashboard() {
                 </div>
             </Card>
 
-            <Card className="p-6 cursor-default">
+            <Card
+                className="p-6 cursor-pointer hover:shadow-lg transition-all group"
+                onClick={() => navigate(ROUTE_PATHS.WITHDRAWAL_LIST)}
+            >
                  <div className="flex items-center gap-4">
                     <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500">
                         <Calendar size={24} />
                     </div>
                     <div className="flex-1">
-                        <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>Upcoming Tests</h3>
+                        <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>Withdrawal Schedule</h3>
                          <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
                             {sortedProducts.filter(s => s.nextTestDate && s.nextTestDate.diff(moment(), 'days') <= 7).length} tests due this week
                          </p>
                     </div>
+                    <ArrowRight className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
                 </div>
             </Card>
         </div>

@@ -8,6 +8,7 @@ import ROUTE_PATHS from './constants/route_paths';
 import InsertNewProduct from './views/InsertNewProduct';
 import Dashboard from './views/Dashboard';
 import Products from './views/Products';
+import WithdrawalList from './views/WithdrawalList';
 import TestDetails from './views/TestDetails';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './contexts/AuthProvider';
@@ -38,6 +39,11 @@ function App() {
               <Route path={ROUTE_PATHS.PRODUCTS} element={
                 <ProtectedRoute>
                   <Products />
+                </ProtectedRoute>
+              } />
+              <Route path={ROUTE_PATHS.WITHDRAWAL_LIST} element={
+                <ProtectedRoute>
+                  <WithdrawalList />
                 </ProtectedRoute>
               } />
               <Route path={ROUTE_PATHS.TEST_DETAILS} element={

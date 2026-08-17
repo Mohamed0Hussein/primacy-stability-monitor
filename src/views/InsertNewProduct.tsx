@@ -108,6 +108,7 @@ const InsertNewProduct = () => {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState<Errors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { success, error } = useToast()
 
   const [data, setData] = useState({
@@ -218,6 +219,7 @@ const InsertNewProduct = () => {
     if (!validateStep()) return
 
     const tests = buildTests();
+    setIsSubmitting(true)
 
     try {
       await Promise.all(
@@ -245,6 +247,8 @@ const InsertNewProduct = () => {
       navigate(ROUTE_PATHS.DASHBOARD);
     } catch {
       // onError handler shows toast
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -509,7 +513,7 @@ const InsertNewProduct = () => {
       >
         <Button
           variant="ghost"
-          disabled={step === 0}
+          disabled={step === 0 || isSubmitting}
           onClick={() => setStep(s => s - 1)}
         >
           Back
@@ -520,7 +524,7 @@ const InsertNewProduct = () => {
             Next
           </Button>
         ) : (
-          <Button variant="primary" onClick={submit}>
+          <Button variant="primary" onClick={submit} isLoading={isSubmitting}>
             Save Product
           </Button>
         )}

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import moment from 'moment'
 import {
@@ -75,10 +75,13 @@ export default function TestDetails() {
   const { theme } = useTheme()
   const { productId } = useParams<{ productId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { success, error: showError } = useToast()
   const queryClient = useQueryClient()
 
   const [expandedTest, setExpandedTest] = useState<string | null>(null)
+  const targetTestId = searchParams.get('testId')
+  const didAutoExpand = useRef(false)
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: [queryKeys.get_products],
@@ -155,6 +158,21 @@ export default function TestDetails() {
         .sort((a: EnrichedTest, b: EnrichedTest) => b.momentDate.diff(a.momentDate))
     }
   }, [product])
+
+  // Deep-link from the Withdrawal Schedule: expand and scroll to a specific
+  // test once, then leave it alone so the user can freely collapse it.
+  useEffect(() => {
+    if (!targetTestId || didAutoExpand.current) return
+
+    const match = [...groupedTests.upcoming, ...groupedTests.past].find(t => t._id === targetTestId)
+    if (!match) return
+
+    didAutoExpand.current = true
+    setExpandedTest(match.key)
+    requestAnimationFrame(() => {
+      document.getElementById(`test-${match.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }, [targetTestId, groupedTests])
 
   if (isLoading) {
     return (
@@ -411,6 +429,7 @@ function TestCard({
 
   return (
     <Card
+      id={`test-${test.key}`}
       className="overflow-hidden transition-all duration-300"
       style={{
         borderLeft: `4px solid ${statusConfig.color}`,
@@ -517,7 +536,7 @@ function CompletedResultsView({ results, specifications }: { results: any[], spe
         <CheckCircle2 size={16} style={{ color: theme.colors.success }} />
         Submitted Results
       </h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {specifications.map(spec => {
           const value = latestResult[spec.testName];
           const numVal = parseFloat(value);
