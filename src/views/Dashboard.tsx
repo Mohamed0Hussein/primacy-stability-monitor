@@ -3,15 +3,14 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import moment from 'moment';
-import { Calendar, FlaskConical, ArrowRight, Eye, Boxes } from 'lucide-react';
+import { Calendar, FlaskConical, ArrowRight, Boxes } from 'lucide-react';
 
 import { useTheme } from '../hooks/useTheme';
-import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
+import { WithdrawalTable } from '../components/withdrawal/WithdrawalTable';
 import { getProducts } from '../utils/api/products';
 import { queryKeys } from '../constants/query_keys';
 import ROUTE_PATHS from '../constants/route_paths';
-import LoadingSpinner from '../components/common/LoadingSpinner';
 
 interface ValidationData {
     status: 'pending' | 'completed' | 'overdue';
@@ -30,7 +29,7 @@ export default function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: [queryKeys.get_products], // Using generic key for substances list for now
     queryFn: async () => {
         const response = await getProducts();
@@ -74,16 +73,6 @@ export default function Dashboard() {
         return a.nextTestDate.diff(b.nextTestDate);
     });
   }, [products]);
-
-  const getStatusColor = (date: moment.Moment | undefined) => {
-    if (!date) return theme.colors.textSecondary;
-    const now = moment().startOf('day');
-    const diffDays = date.diff(now, 'days');
-
-    if (diffDays < 0) return theme.colors.error; // Overdue (shouldn't happen with filter above unless logic changes)
-    if (diffDays <= 7) return theme.colors.warning; // Due within a week
-    return theme.colors.success; // Safe
-  };
 
   return (
     <div className="min-h-full p-8 pb-32" style={{ backgroundColor: theme.colors.background }}>
@@ -154,60 +143,12 @@ export default function Dashboard() {
             </Card>
         </div>
 
-        {/* Withdrawal Dates List */}
+        {/* Monthly Withdrawal List */}
         <div>
             <h2 className="text-xl font-semibold mb-4" style={{ color: theme.colors.text }}>
-                Upcoming Withdrawal Dates
+                Monthly Withdrawal List
             </h2>
-            
-            <div className="space-y-4">
-                {isLoading ? (
-                    <LoadingSpinner fullScreen={false} size="md" loadingLabel="Loading products..." />
-                ) : sortedProducts.length === 0 ? (
-                    <Card className="p-8 text-center flex flex-col items-center justify-center gap-3">
-                        <FlaskConical size={48} className="text-gray-300 dark:text-gray-600" />
-                        <p style={{ color: theme.colors.textSecondary }}>No upcoming tests found.</p>
-                        <Button variant="ghost" onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}>Get Started</Button>
-                    </Card>
-                ) : (
-                    sortedProducts.map((sub) => (
-                        <Card key={sub._id} className="p-4 hover:shadow-md transition-shadow">
-                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                                <div className="flex items-start gap-4">
-                                    <div 
-                                        className="w-1.5 self-stretch rounded-full"
-                                        style={{ backgroundColor: getStatusColor(sub.nextTestDate) }} 
-                                    />
-                                    <div>
-                                        <h3 className="font-semibold" style={{ color: theme.colors.text }}>{sub.productName}</h3>
-                                        <div className="flex gap-4 text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
-                                            <span>Batch: {sub.batchNumber}</span>
-                                            {/* Could add info about dosage form etc if needed */}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-6 w-full md:w-auto mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800">
-                                    <div className="text-right flex-1 md:flex-auto">
-                                        <p className="text-xs uppercase font-bold tracking-wider" style={{ color: theme.colors.textSecondary }}>Next Test</p>
-                                        <p className="font-medium" style={{ color: getStatusColor(sub.nextTestDate) }}>
-                                            {sub.formattedNextDate}
-                                        </p>
-                                    </div>
-                                    <Button 
-                                        variant="ghost"
-                                        onClick={() => navigate(`/product/${sub._id}/tests`)}
-                                        className="flex items-center gap-2 cursor-pointer"
-                                    >
-                                        <Eye size={16} />
-                                        View Tests
-                                    </Button>
-                                </div>
-                            </div>
-                        </Card>
-                    ))
-                )}
-            </div>
+            <WithdrawalTable />
         </div>
 
       </div>
