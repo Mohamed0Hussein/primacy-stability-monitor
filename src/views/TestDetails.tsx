@@ -5,23 +5,21 @@ import moment from 'moment'
 import {
   ArrowLeft,
   Calendar,
-  FlaskConical,
   CheckCircle2,
   Clock,
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  Send,
   Beaker,
-  Loader2
 } from 'lucide-react'
 
 import { useTheme } from '../hooks/useTheme'
 import { useToast } from '../hooks/useToast'
 import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
-import { Input } from '../components/common/Input'
-import Pick from '../components/common/PickInput'
+import { TestResultForm } from '../components/specifications/TestResultForm'
+import { SubmittedResultsView } from '../components/specifications/SubmittedResultsView'
+import { Specification, SubmittedResult } from '../constants/specifications'
 import { getProducts, addTestResult } from '../utils/api/products'
 import { queryKeys } from '../constants/query_keys'
 import ROUTE_PATHS from '../constants/route_paths'
@@ -40,15 +38,6 @@ interface Test {
   results?: TestResult[]
 }
 
-interface Specification {
-  id: string
-  testName: string
-  isNumerical: boolean
-  min?: string
-  max?: string
-  unit?: string
-}
-
 interface Product {
   _id: string
   productName: string
@@ -59,16 +48,6 @@ interface Product {
   tests?: Test[]
   testsResults?: TestResult[]
   specifications?: Specification[]
-}
-
-// For a % spec, a limit of 0 means "no limit on that side" rather than a
-// literal 0% bound — "0 - 5%" reads as a range, but it's really a ceiling.
-function formatRange(min: string | undefined, max: string | undefined, unit: string | undefined) {
-  if (unit === '%') {
-    if (min === '0' && max) return `no more than ${max}%`
-    if (max === '0' && min) return `no less than ${min}%`
-  }
-  return `${min} - ${max} ${unit || ''}`.trim()
 }
 
 export default function TestDetails() {
@@ -496,9 +475,14 @@ function TestCard({
           style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}
         >
           {test.computedStatus === 'completed' ? (
-            <CompletedResultsView 
-              results={test.results || []} 
-              specifications={specifications} 
+            <SubmittedResultsView
+              result={
+                (test.results as unknown as SubmittedResult[] || []).reduce<SubmittedResult | null>(
+                  (latest, r) => (!latest || moment(r.createdAt).isAfter(latest.createdAt) ? r : latest),
+                  null
+                ) || { testId: test._id || '' }
+              }
+              specifications={specifications}
             />
           ) : isUpcoming ? (
             <TestResultForm 
@@ -525,264 +509,3 @@ function TestCard({
   )
 }
 
-function CompletedResultsView({ results, specifications }: { results: any[], specifications: Specification[] }) {
-  const { theme } = useTheme()
-  // The first result contains the test values as keys
-  const latestResult = results[0] || {}
-
-  return (
-    <div className="space-y-4">
-      <h4 className="font-medium mb-4 flex items-center gap-2" style={{ color: theme.colors.text }}>
-        <CheckCircle2 size={16} style={{ color: theme.colors.success }} />
-        Submitted Results
-      </h4>
-      <div className="grid grid-cols-1 gap-4">
-        {specifications.map(spec => {
-          const value = latestResult[spec.testName];
-          const numVal = parseFloat(value);
-          const isOutOfLimits = spec.isNumerical && !isNaN(numVal) && (
-            (spec.min && numVal < parseFloat(spec.min)) || 
-            (spec.max && numVal > parseFloat(spec.max))
-          );
-
-          return (
-            <div 
-              key={spec.id} 
-              className="p-3 rounded-lg border flex flex-col justify-center transition-all duration-300"
-              style={{ 
-                borderColor: isOutOfLimits ? '#EAB308' : theme.colors.border, 
-                backgroundColor: isOutOfLimits ? 'rgba(234, 179, 8, 0.05)' : theme.colors.background,
-                boxShadow: isOutOfLimits ? '0 0 10px rgba(234, 179, 8, 0.1)' : '0 2px 4px rgba(0,0,0,0.05)'
-              }}
-            >
-              <div className="flex justify-between items-start mb-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
-                  {spec.testName}
-                </p>
-                {isOutOfLimits && (
-                  <span className="text-[8px] font-bold uppercase bg-yellow-500/20 text-yellow-600 px-1.5 py-0.5 rounded-full">
-                    Out of Limits
-                  </span>
-                )}
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className="text-lg font-bold" style={{ color: isOutOfLimits ? '#CA8A04' : theme.colors.primary }}>
-                  {value || 'N/A'} {spec.isNumerical ? (spec.unit || '') : ''}
-                </p>
-              </div>
-              {spec.isNumerical && (
-                <p className="text-[10px] mt-1" style={{ color: theme.colors.textSecondary }}>
-                  Limit: {formatRange(spec.min, spec.max, spec.unit)}
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {latestResult.createdAt && (
-        <div 
-          className="mt-6 pt-4 border-t flex items-center gap-2 text-xs" 
-          style={{ borderColor: theme.colors.border, color: theme.colors.textSecondary }}
-        >
-          <Clock size={12} />
-          <span>Recorded on {moment(latestResult.createdAt).format('MMMM DD, YYYY [at] HH:mm')}</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-const NON_NUMERICAL_CHOICES = ['Confirm', 'Complies', 'Positive', 'Not Confirm', 'Not Complies', 'Not Positive', 'Other']
-
-interface TestResultFormProps {
-  specifications: Specification[]
-  onSubmit: (results: Record<string, string>) => void
-  isSubmitting: boolean
-}
-
-function TestResultForm({ specifications, onSubmit, isSubmitting }: TestResultFormProps) {
-  const { theme } = useTheme()
-  const { error: showError } = useToast()
-
-  const [results, setResults] = useState<Record<string, string>>({})
-  const [choices, setChoices] = useState<Record<string, string>>({})
-  const [otherText, setOtherText] = useState<Record<string, string>>({})
-  const [validation, setValidation] = useState<Record<string, { error: string | null, warning: string | null }>>({})
-
-  const validateValue = (spec: Specification, value: string) => {
-    if (!value) return { error: null, warning: null }
-
-    if (spec.isNumerical) {
-      const numVal = parseFloat(value)
-      if (isNaN(numVal)) return { error: 'Must be a number', warning: null }
-
-      if ((spec.min && numVal < parseFloat(spec.min)) || (spec.max && numVal > parseFloat(spec.max))) {
-        return { error: null, warning: 'Out of limits' }
-      }
-    }
-    return { error: null, warning: null }
-  }
-
-  const handleChange = (spec: Specification, value: string) => {
-    setResults(prev => ({
-      ...prev,
-      [spec.testName]: value
-    }))
-
-    const result = validateValue(spec, value)
-    setValidation(prev => ({
-      ...prev,
-      [spec.testName]: result
-    }))
-  }
-
-  const handleChoiceChange = (spec: Specification, choice: string) => {
-    setChoices(prev => ({ ...prev, [spec.testName]: choice }))
-
-    if (choice === 'Other') {
-      setResults(prev => ({ ...prev, [spec.testName]: otherText[spec.testName] || '' }))
-    } else {
-      setResults(prev => ({ ...prev, [spec.testName]: choice }))
-    }
-  }
-
-  const handleOtherTextChange = (spec: Specification, text: string) => {
-    setOtherText(prev => ({ ...prev, [spec.testName]: text }))
-    setResults(prev => ({ ...prev, [spec.testName]: text }))
-  }
-
-  const handleSubmit = () => {
-    if (Object.keys(results).length === 0) {
-      showError('Please enter at least one result')
-      return
-    }
-
-    const hasErrors = Object.values(validation).some(v => !!v.error)
-    if (hasErrors) {
-      showError('Please fix validation errors before submitting')
-      return
-    }
-
-    const missingSpecs = specifications.filter(s => !results[s.testName])
-    if (missingSpecs.length > 0) {
-      showError(`Please enter results for: ${missingSpecs.map(s => s.testName).join(', ')}`)
-      return
-    }
-
-    onSubmit(results)
-  }
-
-  return (
-    <>
-      <h4 className="font-medium mb-4 flex items-center gap-2" style={{ color: theme.colors.text }}>
-        <FlaskConical size={16} style={{ color: theme.colors.primary }} />
-        Enter Test Results
-      </h4>
-
-      {specifications && specifications.length > 0 ? (
-        <div className="space-y-4">
-          {specifications.map((spec: Specification) => (
-            <div
-              key={spec.id}
-              className="p-3 rounded-lg border transition-all duration-300"
-              style={{
-                borderColor: validation[spec.testName]?.error 
-                  ? theme.colors.error 
-                  : validation[spec.testName]?.warning 
-                    ? '#EAB308' 
-                    : theme.colors.border,
-                backgroundColor: validation[spec.testName]?.warning ? 'rgba(234, 179, 8, 0.05)' : theme.colors.background
-              }}
-            >
-              <div className="flex flex-col md:flex-row md:items-center gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <label
-                      className="font-medium text-sm block"
-                      style={{ color: theme.colors.text }}
-                    >
-                      {spec.testName}
-                    </label>
-                    {validation[spec.testName]?.warning && (
-                      <span className="text-[10px] font-bold uppercase text-yellow-600 bg-yellow-500/20 px-2 py-0.5 rounded-full">
-                        {validation[spec.testName]?.warning}
-                      </span>
-                    )}
-                  </div>
-                  {spec.isNumerical && (
-                    <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                      Acceptable range: {formatRange(spec.min, spec.max, spec.unit)}
-                    </p>
-                  )}
-                  {validation[spec.testName]?.error && (
-                    <p className="text-xs mt-1 animate-fadeIn" style={{ color: theme.colors.error }}>
-                      {validation[spec.testName]?.error}
-                    </p>
-                  )}
-                </div>
-                <div className="md:w-56 space-y-2">
-                  {spec.isNumerical ? (
-                    <Input
-                      type="number"
-                      placeholder={`${spec.min} - ${spec.max}`}
-                      value={results[spec.testName] || ''}
-                      onChange={(e) => handleChange(spec, e.target.value)}
-                      className={
-                        validation[spec.testName]?.error
-                          ? 'border-red-500 focus:border-red-500'
-                          : validation[spec.testName]?.warning
-                            ? 'border-yellow-500 focus:border-yellow-500 shadow-[0_0_0_1px_rgba(234,179,8,0.2)]'
-                            : ''
-                      }
-                    />
-                  ) : (
-                    <>
-                      <Pick
-                        options={NON_NUMERICAL_CHOICES.map(c => ({ label: c, value: c }))}
-                        value={choices[spec.testName] || ''}
-                        placeholder="Select result..."
-                        onChange={(v) => handleChoiceChange(spec, Array.isArray(v) ? v[0] : v)}
-                      />
-                      {choices[spec.testName] === 'Other' && (
-                        <Input
-                          type="text"
-                          placeholder="Enter result..."
-                          value={otherText[spec.testName] || ''}
-                          onChange={(e) => handleOtherTextChange(spec, e.target.value)}
-                        />
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex justify-end pt-2">
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Send size={16} />
-              )}
-              {isSubmitting ? 'Submitting...' : 'Submit Results'}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div
-          className="text-center py-6 border-2 border-dashed rounded-lg"
-          style={{ borderColor: theme.colors.border, color: theme.colors.textSecondary }}
-        >
-          <FlaskConical size={32} className="mx-auto mb-2 opacity-50" />
-          <p>No specifications defined for this product.</p>
-          <p className="text-sm mt-1">Add specifications when creating the product to enable result entry.</p>
-        </div>
-      )}
-    </>
-  )
-}

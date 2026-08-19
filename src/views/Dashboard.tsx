@@ -1,36 +1,38 @@
 // src/views/Dashboard.tsx
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import moment from 'moment';
-import { Calendar, FlaskConical, ArrowRight, Boxes } from 'lucide-react';
+import { AlertTriangle, Eye, FlaskConical, Plus } from 'lucide-react';
 
 import { useTheme } from '../hooks/useTheme';
+import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
+import { ProductDetailModal } from '../components/products/ProductDetailModal';
 import { WithdrawalTable } from '../components/withdrawal/WithdrawalTable';
+import { formatConditionsList } from '../constants/stability_conditions';
+import { Specification } from '../constants/specifications';
 import { getProducts } from '../utils/api/products';
 import { queryKeys } from '../constants/query_keys';
 import ROUTE_PATHS from '../constants/route_paths';
-
-interface ValidationData {
-    status: 'pending' | 'completed' | 'overdue';
-    date: string;
-}
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 interface Product {
   _id: string;
   productName: string;
   batchNumber: string;
-  tests?: { condition: string, date: string }[];
-  validations?: Record<string, ValidationData>;
+  conditions?: string[];
+  specifications?: Specification[];
+  testsResults?: { createdAt?: string }[];
 }
 
 export default function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: products = [] } = useQuery({
-    queryKey: [queryKeys.get_products], // Using generic key for substances list for now
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: [queryKeys.get_products],
     queryFn: async () => {
         const response = await getProducts();
         return response.data;
@@ -39,45 +41,32 @@ export default function Dashboard() {
 
   const sortedProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
-
-    const now = moment().startOf('day');
-
-    return [...products].map((sub: Product) => { // Added type hint
-        let upcomingDate: moment.Moment | undefined;
-        let upcomingCondition: string | undefined;
-
-        if (sub.tests && Array.isArray(sub.tests) && sub.tests.length > 0) {
-             const upcomingTest = sub.tests
-                .map(t => ({ ...t, m: moment(t.date) }))
-                .filter(t => t.m.isSameOrAfter(now))
-                .sort((a, b) => a.m.diff(b.m))[0];
-             
-             if (upcomingTest) {
-                upcomingDate = upcomingTest.m;
-                upcomingCondition = upcomingTest.condition;
-             }
-        }
-        
-        const dateStr = upcomingDate ? upcomingDate.format('MMM DD, YYYY') : 'No upcoming tests';
-        const displayStr = upcomingCondition ? `${dateStr} (${upcomingCondition})` : dateStr;
-
-        return {
-            ...sub,
-            nextTestDate: upcomingDate,
-            formattedNextDate: displayStr
-        };
-    }).sort((a, b) => {
-        if (!a.nextTestDate && !b.nextTestDate) return 0;
-        if (!a.nextTestDate) return 1;
-        if (!b.nextTestDate) return -1;
-        return a.nextTestDate.diff(b.nextTestDate);
-    });
+    return [...products].sort((a: Product, b: Product) => a.productName.localeCompare(b.productName));
   }, [products]);
+
+  const incompleteProducts = useMemo(
+    () => sortedProducts.filter((p: Product) => !p.specifications || p.specifications.length === 0),
+    [sortedProducts]
+  );
+
+  const selectedProduct = useMemo(
+    () => sortedProducts.find((p: Product) => p._id === selectedId) || null,
+    [sortedProducts, selectedId]
+  );
+
+  const lastResultLabel = (product: Product) => {
+    const dates = (product.testsResults || [])
+      .map(r => r.createdAt)
+      .filter((d): d is string => !!d)
+      .sort();
+    const latest = dates[dates.length - 1];
+    return latest ? `Last submitted ${moment(latest).format('MMM DD, YYYY')}` : 'No results submitted yet';
+  };
 
   return (
     <div className="min-h-full p-8 pb-32" style={{ backgroundColor: theme.colors.background }}>
       <div className="max-w-6xl mx-auto space-y-8">
-        
+
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -88,59 +77,100 @@ export default function Dashboard() {
               Manage your stability studies and upcoming tests
             </p>
           </div>
+          <Button variant="primary" onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)} className="flex items-center gap-2">
+            <Plus size={16} />
+            Insert New Product
+          </Button>
         </div>
 
-        {/* Quick Stats / Navigation Cards - Optional but nice for "buttons to take user..." request */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card
-                className="p-6 cursor-pointer hover:shadow-lg transition-all group"
-                onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}
-            >
-                <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500">
-                        <FlaskConical size={24} />
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>Insert Product</h3>
-                        <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Register a new product batch</p>
-                    </div>
-                    <ArrowRight className="text-gray-300 group-hover:text-indigo-500 transition-colors" />
-                </div>
-            </Card>
+        {/* Incomplete Products */}
+        {incompleteProducts.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: theme.colors.warning }}>
+              <AlertTriangle size={18} />
+              Incomplete Products
+              <span
+                className="text-sm font-normal px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: `${theme.colors.warning}20`, color: theme.colors.warning }}
+              >
+                {incompleteProducts.length}
+              </span>
+            </h2>
+            <div className="space-y-2">
+              {incompleteProducts.map((product: Product) => (
+                <Card
+                  key={product._id}
+                  className="p-3 flex items-center justify-between gap-4"
+                  style={{ borderColor: theme.colors.warning }}
+                >
+                  <div>
+                    <span className="font-medium" style={{ color: theme.colors.text }}>{product.productName}</span>
+                    <span className="text-sm ml-2" style={{ color: theme.colors.textSecondary }}>
+                      Batch: {product.batchNumber} · no specifications yet
+                    </span>
+                  </div>
+                  <Button variant="ghost" onClick={() => setSelectedId(product._id)}>
+                    Complete
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
-            <Card
-                className="p-6 cursor-pointer hover:shadow-lg transition-all group"
-                onClick={() => navigate(ROUTE_PATHS.PRODUCTS)}
-            >
-                <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-500">
-                        <Boxes size={24} />
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>View Products</h3>
-                        <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Browse products and their IDs</p>
-                    </div>
-                    <ArrowRight className="text-gray-300 group-hover:text-purple-500 transition-colors" />
-                </div>
-            </Card>
+        {/* Products Under Testing */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4" style={{ color: theme.colors.text }}>
+            Products Under Testing
+          </h2>
 
-            <Card
-                className="p-6 cursor-pointer hover:shadow-lg transition-all group"
-                onClick={() => navigate(ROUTE_PATHS.WITHDRAWAL_LIST)}
-            >
-                 <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500">
-                        <Calendar size={24} />
+          <div className="space-y-3">
+            {isLoading ? (
+              <LoadingSpinner fullScreen={false} size="md" loadingLabel="Loading products..." />
+            ) : sortedProducts.length === 0 ? (
+              <Card className="p-8 text-center flex flex-col items-center justify-center gap-3">
+                <FlaskConical size={48} className="text-gray-300 dark:text-gray-600" />
+                <p style={{ color: theme.colors.textSecondary }}>No products found.</p>
+                <Button variant="ghost" onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}>Insert a product</Button>
+              </Card>
+            ) : (
+              sortedProducts.map((product: Product) => (
+                <Card
+                  key={product._id}
+                  className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setSelectedId(product._id)}
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="p-2.5 rounded-lg"
+                        style={{ backgroundColor: `${theme.colors.primary}20`, color: theme.colors.primary }}
+                      >
+                        <FlaskConical size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold" style={{ color: theme.colors.text }}>{product.productName}</h3>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+                          <span>Batch: {product.batchNumber}</span>
+                          <span>{formatConditionsList(product.conditions)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                        <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>Withdrawal Schedule</h3>
-                         <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
-                            {sortedProducts.filter(s => s.nextTestDate && s.nextTestDate.diff(moment(), 'days') <= 7).length} tests due this week
-                         </p>
+
+                    <div className="flex items-center gap-4 md:flex-row-reverse md:pl-0 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800">
+                      <Button variant="ghost" className="flex items-center gap-2">
+                        <Eye size={16} />
+                        View details
+                      </Button>
+                      <span className="text-sm" style={{ color: theme.colors.textSecondary }}>
+                        {lastResultLabel(product)}
+                      </span>
                     </div>
-                    <ArrowRight className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
-                </div>
-            </Card>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Monthly Withdrawal List */}
@@ -152,6 +182,8 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      <ProductDetailModal product={selectedProduct} onClose={() => setSelectedId(null)} />
     </div>
   );
 }

@@ -79,3 +79,23 @@
 .animate-loading-bar {
   animation: loadingBarSlide 1.1s ease-in-out infinite;
 }
+
+/* Printing a single record (Product Detail Modal → Last Submitted Results):
+   hide everything on the page except the marked printable block, regardless
+   of where it's nested (modal chrome, overlay, sidebar, etc). */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-results,
+  #printable-results * {
+    visibility: visible;
+  }
+  #printable-results {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 24px;
+  }
+}

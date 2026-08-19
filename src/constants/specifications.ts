@@ -18,3 +18,23 @@ export const unitOptions = [
 ]
 
 export const referenceOptions = ['inhouse', 'USP', 'EP', 'Eur.ph'].map(r => ({ label: r, value: r }))
+
+// A recorded test-result entry — always has a testId and createdAt, plus one
+// key per specification's testName holding the submitted value.
+export interface SubmittedResult {
+  testId: string
+  createdAt?: string
+  [specName: string]: unknown
+}
+
+export const NON_NUMERICAL_CHOICES = ['Confirm', 'Complies', 'Positive', 'Not Confirm', 'Not Complies', 'Not Positive', 'Other']
+
+// For a % spec, a limit of 0 means "no limit on that side" rather than a
+// literal 0% bound — "0 - 5%" reads as a range, but it's really a ceiling.
+export function formatRange(min: string | undefined, max: string | undefined, unit: string | undefined) {
+  if (unit === '%') {
+    if (min === '0' && max) return `no more than ${max}%`
+    if (max === '0' && min) return `no less than ${min}%`
+  }
+  return `${min} - ${max} ${unit || ''}`.trim()
+}

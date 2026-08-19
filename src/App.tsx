@@ -7,7 +7,6 @@ import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom'
 import ROUTE_PATHS from './constants/route_paths';
 import InsertNewProduct from './views/InsertNewProduct';
 import Dashboard from './views/Dashboard';
-import Products from './views/Products';
 import WithdrawalList from './views/WithdrawalList';
 import TestDetails from './views/TestDetails';
 import { AppLayout } from './layout/AppLayout';
@@ -34,11 +33,6 @@ function App() {
               <Route path={ROUTE_PATHS.INSERT_PRODUCT} element={
                 <ProtectedRoute>
                   <InsertNewProduct />
-                </ProtectedRoute>
-              } />
-              <Route path={ROUTE_PATHS.PRODUCTS} element={
-                <ProtectedRoute>
-                  <Products />
                 </ProtectedRoute>
               } />
               <Route path={ROUTE_PATHS.WITHDRAWAL_LIST} element={
