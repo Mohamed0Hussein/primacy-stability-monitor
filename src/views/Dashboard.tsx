@@ -24,6 +24,8 @@ interface Product {
   conditions?: string[];
   specifications?: Specification[];
   testsResults?: { createdAt?: string }[];
+  stabilityDate?: string;
+  expiryDate?: string;
 }
 
 export default function Dashboard() {
@@ -54,13 +56,22 @@ export default function Dashboard() {
     [sortedProducts, selectedId]
   );
 
-  const lastResultLabel = (product: Product) => {
-    const dates = (product.testsResults || [])
-      .map(r => r.createdAt)
-      .filter((d): d is string => !!d)
-      .sort();
-    const latest = dates[dates.length - 1];
-    return latest ? `Last submitted ${moment(latest).format('MMM DD, YYYY')}` : 'No results submitted yet';
+  const productGroups = useMemo(() => {
+    const map = new Map<string, Product[]>();
+    for (const product of sortedProducts) {
+      const batches = map.get(product.productName) || [];
+      batches.push(product);
+      map.set(product.productName, batches);
+    }
+    return Array.from(map.values());
+  }, [sortedProducts]);
+
+  const formatDateRange = (batches: Product[], field: 'stabilityDate' | 'expiryDate') => {
+    const dates = batches.map(b => b[field]).filter((d): d is string => !!d).sort();
+    if (dates.length === 0) return '—';
+    const first = moment(dates[0]).format('DD/MM/YYYY');
+    const last = moment(dates[dates.length - 1]).format('DD/MM/YYYY');
+    return first === last ? first : `${first} – ${last}`;
   };
 
   return (
@@ -124,53 +135,80 @@ export default function Dashboard() {
             Products Under Testing
           </h2>
 
-          <div className="space-y-3">
-            {isLoading ? (
-              <LoadingSpinner fullScreen={false} size="md" loadingLabel="Loading products..." />
-            ) : sortedProducts.length === 0 ? (
-              <Card className="p-8 text-center flex flex-col items-center justify-center gap-3">
-                <FlaskConical size={48} className="text-gray-300 dark:text-gray-600" />
-                <p style={{ color: theme.colors.textSecondary }}>No products found.</p>
-                <Button variant="ghost" onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}>Insert a product</Button>
-              </Card>
-            ) : (
-              sortedProducts.map((product: Product) => (
-                <Card
-                  key={product._id}
-                  className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => setSelectedId(product._id)}
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="p-2.5 rounded-lg"
-                        style={{ backgroundColor: `${theme.colors.primary}20`, color: theme.colors.primary }}
+          {isLoading ? (
+            <LoadingSpinner fullScreen={false} size="md" loadingLabel="Loading products..." />
+          ) : sortedProducts.length === 0 ? (
+            <Card className="p-8 text-center flex flex-col items-center justify-center gap-3">
+              <FlaskConical size={48} className="text-gray-300 dark:text-gray-600" />
+              <p style={{ color: theme.colors.textSecondary }}>No products found.</p>
+              <Button variant="ghost" onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}>Insert a product</Button>
+            </Card>
+          ) : (
+            <Card className="p-0 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" style={{ minWidth: 780 }}>
+                  <thead>
+                    <tr style={{ backgroundColor: theme.colors.surfaceVariant }}>
+                      {['Product name', 'Batch #', 'Conditions', 'Stability start', 'Stability end', ''].map(h => (
+                        <th
+                          key={h}
+                          className="text-left px-4 py-3 font-semibold whitespace-nowrap"
+                          style={{ color: theme.colors.textSecondary }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productGroups.map((batches) => (
+                      <tr
+                        key={batches[0].productName}
+                        className="border-t"
+                        style={{ borderColor: theme.colors.border }}
                       >
-                        <FlaskConical size={20} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold" style={{ color: theme.colors.text }}>{product.productName}</h3>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
-                          <span>Batch: {product.batchNumber}</span>
-                          <span>{formatConditionsList(product.conditions)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 md:flex-row-reverse md:pl-0 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800">
-                      <Button variant="ghost" className="flex items-center gap-2">
-                        <Eye size={16} />
-                        View details
-                      </Button>
-                      <span className="text-sm" style={{ color: theme.colors.textSecondary }}>
-                        {lastResultLabel(product)}
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              ))
-            )}
-          </div>
+                        <td className="px-4 py-3 font-medium whitespace-nowrap align-top" style={{ color: theme.colors.text }}>
+                          {batches[0].productName}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
+                          <div className="flex flex-wrap gap-x-2 gap-y-1">
+                            {batches.map(b => (
+                              <button
+                                key={b._id}
+                                onClick={() => setSelectedId(b._id)}
+                                className="underline decoration-dotted underline-offset-2 hover:opacity-75 cursor-pointer"
+                              >
+                                {b.batchNumber}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
+                          {formatConditionsList(batches[0].conditions)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
+                          {formatDateRange(batches, 'stabilityDate')}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
+                          {formatDateRange(batches, 'expiryDate')}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap align-top">
+                          <Button
+                            variant="ghost"
+                            onClick={() => setSelectedId(batches[0]._id)}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Eye size={16} />
+                            View details
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Monthly Withdrawal List */}
