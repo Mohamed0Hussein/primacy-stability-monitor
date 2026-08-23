@@ -12,9 +12,12 @@ import { SpecificationForm } from '../specifications/SpecificationForm'
 import { SpecificationList } from '../specifications/SpecificationList'
 import { SubmittedResultsView } from '../specifications/SubmittedResultsView'
 import { TestResultForm } from '../specifications/TestResultForm'
+import { StabilityReportTable } from './StabilityReportTable'
+import { formatCondition } from '../../constants/stability_conditions'
 import { Specification, SubmittedResult } from '../../constants/specifications'
 import { addTestResult, updateProduct } from '../../utils/api/products'
 import { queryKeys } from '../../constants/query_keys'
+import { printSection } from '../../utils/print'
 
 interface TestEntry {
   _id?: string
@@ -87,7 +90,7 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
     success('ID copied to clipboard')
   }
 
-  const handlePrint = () => window.print()
+  const handlePrint = () => printSection('results')
 
   if (!product) return null
 
@@ -198,6 +201,27 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
             </div>
           )}
         </DetailSection>
+
+        {(product.conditions || []).length > 0 && (
+          <DetailSection title="Stability Reports" theme={theme}>
+            <div id="printable-report" className="space-y-6">
+              {(product.conditions || []).map(condition => (
+                <div key={condition}>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: theme.colors.textSecondary }}>
+                    {formatCondition(condition)}
+                  </p>
+                  <StabilityReportTable product={product} condition={condition} />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-4 print:hidden">
+              <Button variant="ghost" onClick={() => printSection('report')} className="flex items-center gap-2">
+                <Printer size={16} />
+                Print Reports
+              </Button>
+            </div>
+          </DetailSection>
+        )}
 
         <DetailSection title="Tests/Specifications" theme={theme}>
           <div className="mb-4">

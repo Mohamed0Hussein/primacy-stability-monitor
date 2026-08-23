@@ -1,39 +1,28 @@
 // src/views/Dashboard.tsx
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import moment from 'moment';
-import { AlertTriangle, Eye, FlaskConical, Plus } from 'lucide-react';
+import { ArrowRight, Boxes, Calendar, FlaskConical } from 'lucide-react';
 
 import { useTheme } from '../hooks/useTheme';
-import { Button } from '../components/common/Button';
+import { Theme } from '../themes/themes';
 import { Card } from '../components/common/Card';
-import { ProductDetailModal } from '../components/products/ProductDetailModal';
-import { WithdrawalTable } from '../components/withdrawal/WithdrawalTable';
-import { formatConditionsList } from '../constants/stability_conditions';
 import { Specification } from '../constants/specifications';
 import { getProducts } from '../utils/api/products';
 import { queryKeys } from '../constants/query_keys';
 import ROUTE_PATHS from '../constants/route_paths';
-import LoadingSpinner from '../components/common/LoadingSpinner';
 
 interface Product {
   _id: string;
   productName: string;
-  batchNumber: string;
-  conditions?: string[];
   specifications?: Specification[];
-  testsResults?: { createdAt?: string }[];
-  stabilityDate?: string;
-  expiryDate?: string;
 }
 
 export default function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: [queryKeys.get_products],
     queryFn: async () => {
         const response = await getProducts();
@@ -41,187 +30,85 @@ export default function Dashboard() {
     },
   });
 
-  const sortedProducts = useMemo(() => {
-    if (!Array.isArray(products)) return [];
-    return [...products].sort((a: Product, b: Product) => a.productName.localeCompare(b.productName));
-  }, [products]);
-
-  const incompleteProducts = useMemo(
-    () => sortedProducts.filter((p: Product) => !p.specifications || p.specifications.length === 0),
-    [sortedProducts]
+  const incompleteCount = useMemo(
+    () => (Array.isArray(products) ? products.filter((p: Product) => !p.specifications || p.specifications.length === 0).length : 0),
+    [products]
   );
-
-  const selectedProduct = useMemo(
-    () => sortedProducts.find((p: Product) => p._id === selectedId) || null,
-    [sortedProducts, selectedId]
-  );
-
-  const productGroups = useMemo(() => {
-    const map = new Map<string, Product[]>();
-    for (const product of sortedProducts) {
-      const batches = map.get(product.productName) || [];
-      batches.push(product);
-      map.set(product.productName, batches);
-    }
-    return Array.from(map.values());
-  }, [sortedProducts]);
-
-  const formatDateRange = (batches: Product[], field: 'stabilityDate' | 'expiryDate') => {
-    const dates = batches.map(b => b[field]).filter((d): d is string => !!d).sort();
-    if (dates.length === 0) return '—';
-    const first = moment(dates[0]).format('DD/MM/YYYY');
-    const last = moment(dates[dates.length - 1]).format('DD/MM/YYYY');
-    return first === last ? first : `${first} – ${last}`;
-  };
 
   return (
     <div className="min-h-full p-8 pb-32" style={{ backgroundColor: theme.colors.background }}>
       <div className="max-w-6xl mx-auto space-y-8">
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold mb-2" style={{ color: theme.colors.text }}>
-              Dashboard
-            </h1>
-            <p style={{ color: theme.colors.textSecondary }}>
-              Manage your stability studies and upcoming tests
-            </p>
-          </div>
-          <Button variant="primary" onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)} className="flex items-center gap-2">
-            <Plus size={16} />
-            Insert New Product
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: theme.colors.text }}>
+            Dashboard
+          </h1>
+          <p style={{ color: theme.colors.textSecondary }}>
+            Manage your stability studies and upcoming tests
+          </p>
         </div>
 
-        {/* Incomplete Products */}
-        {incompleteProducts.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: theme.colors.warning }}>
-              <AlertTriangle size={18} />
-              Incomplete Products
-              <span
-                className="text-sm font-normal px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: `${theme.colors.warning}20`, color: theme.colors.warning }}
-              >
-                {incompleteProducts.length}
-              </span>
-            </h2>
-            <div className="space-y-2">
-              {incompleteProducts.map((product: Product) => (
-                <Card
-                  key={product._id}
-                  className="p-3 flex items-center justify-between gap-4"
-                  style={{ borderColor: theme.colors.warning }}
-                >
-                  <div>
-                    <span className="font-medium" style={{ color: theme.colors.text }}>{product.productName}</span>
-                    <span className="text-sm ml-2" style={{ color: theme.colors.textSecondary }}>
-                      Batch: {product.batchNumber} · no specifications yet
-                    </span>
-                  </div>
-                  <Button variant="ghost" onClick={() => setSelectedId(product._id)}>
-                    Complete
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Navigation Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <NavCard
+            theme={theme}
+            icon={<FlaskConical size={24} />}
+            iconClass="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500"
+            title="Insert Product"
+            subtitle="Register a new product batch"
+            onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}
+          />
 
-        {/* Products Under Testing */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4" style={{ color: theme.colors.text }}>
-            Products Under Testing
-          </h2>
+          <NavCard
+            theme={theme}
+            icon={<Boxes size={24} />}
+            iconClass="bg-purple-50 dark:bg-purple-900/20 text-purple-500"
+            title="Products Under Testing"
+            subtitle={incompleteCount > 0 ? `${incompleteCount} missing specifications` : 'Browse products and batches'}
+            onClick={() => navigate(ROUTE_PATHS.PRODUCTS_UNDER_TESTING)}
+          />
 
-          {isLoading ? (
-            <LoadingSpinner fullScreen={false} size="md" loadingLabel="Loading products..." />
-          ) : sortedProducts.length === 0 ? (
-            <Card className="p-8 text-center flex flex-col items-center justify-center gap-3">
-              <FlaskConical size={48} className="text-gray-300 dark:text-gray-600" />
-              <p style={{ color: theme.colors.textSecondary }}>No products found.</p>
-              <Button variant="ghost" onClick={() => navigate(ROUTE_PATHS.INSERT_PRODUCT)}>Insert a product</Button>
-            </Card>
-          ) : (
-            <Card className="p-0 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ minWidth: 780 }}>
-                  <thead>
-                    <tr style={{ backgroundColor: theme.colors.surfaceVariant }}>
-                      {['Product name', 'Batch #', 'Conditions', 'Stability start', 'Stability end', ''].map(h => (
-                        <th
-                          key={h}
-                          className="text-left px-4 py-3 font-semibold whitespace-nowrap"
-                          style={{ color: theme.colors.textSecondary }}
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {productGroups.map((batches) => (
-                      <tr
-                        key={batches[0].productName}
-                        className="border-t"
-                        style={{ borderColor: theme.colors.border }}
-                      >
-                        <td className="px-4 py-3 font-medium whitespace-nowrap align-top" style={{ color: theme.colors.text }}>
-                          {batches[0].productName}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
-                          <div className="flex flex-wrap gap-x-2 gap-y-1">
-                            {batches.map(b => (
-                              <button
-                                key={b._id}
-                                onClick={() => setSelectedId(b._id)}
-                                className="underline decoration-dotted underline-offset-2 hover:opacity-75 cursor-pointer"
-                              >
-                                {b.batchNumber}
-                              </button>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
-                          {formatConditionsList(batches[0].conditions)}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
-                          {formatDateRange(batches, 'stabilityDate')}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
-                          {formatDateRange(batches, 'expiryDate')}
-                        </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap align-top">
-                          <Button
-                            variant="ghost"
-                            onClick={() => setSelectedId(batches[0]._id)}
-                            className="flex items-center gap-2 cursor-pointer"
-                          >
-                            <Eye size={16} />
-                            View details
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* Monthly Withdrawal List */}
-        <div>
-            <h2 className="text-xl font-semibold mb-4" style={{ color: theme.colors.text }}>
-                Monthly Withdrawal List
-            </h2>
-            <WithdrawalTable />
+          <NavCard
+            theme={theme}
+            icon={<Calendar size={24} />}
+            iconClass="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500"
+            title="Withdrawal Schedule"
+            subtitle="View this month's withdrawal dates"
+            onClick={() => navigate(ROUTE_PATHS.WITHDRAWAL_LIST)}
+          />
         </div>
 
       </div>
-
-      <ProductDetailModal product={selectedProduct} onClose={() => setSelectedId(null)} />
     </div>
+  );
+}
+
+interface NavCardProps {
+  theme: Theme;
+  icon: React.ReactNode;
+  iconClass: string;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+}
+
+function NavCard({ theme, icon, iconClass, title, subtitle, onClick }: NavCardProps) {
+  return (
+    <Card
+      className="p-6 cursor-pointer hover:shadow-lg transition-all group"
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-4">
+        <div className={`p-3 rounded-xl ${iconClass}`}>
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-lg" style={{ color: theme.colors.text }}>{title}</h3>
+          <p className="text-sm" style={{ color: theme.colors.textSecondary }}>{subtitle}</p>
+        </div>
+        <ArrowRight className="text-gray-300 group-hover:text-indigo-500 transition-colors" />
+      </div>
+    </Card>
   );
 }

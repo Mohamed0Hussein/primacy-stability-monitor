@@ -192,12 +192,14 @@ const InsertNewProduct = () => {
 
       if (condition.includes('Accelerated')) {
         datesForCondition = [
+          moment().startOf('day'), // Initial
           moment().add(1, 'months').startOf('day'),
           moment().add(3, 'months').startOf('day'),
           moment().add(6, 'months').startOf('day'),
         ];
       } else if (condition.includes('Long-term')) {
         datesForCondition = [
+          moment().startOf('day'), // Initial
           moment().add(3, 'months').startOf('day'),
           moment().add(6, 'months').startOf('day'),
           moment().add(9, 'months').startOf('day'),

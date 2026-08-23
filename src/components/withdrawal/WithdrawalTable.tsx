@@ -9,7 +9,7 @@ import { Button } from '../common/Button'
 import { Card } from '../common/Card'
 import { getProducts } from '../../utils/api/products'
 import { queryKeys } from '../../constants/query_keys'
-import { conditionDetails } from '../../constants/stability_conditions'
+import { formatCondition, getPeriodsForCondition } from '../../constants/stability_conditions'
 import LoadingSpinner from '../common/LoadingSpinner'
 
 interface TestEntry {
@@ -38,15 +38,6 @@ interface WithdrawalItem {
   condition: string
   period: string
   date: moment.Moment
-}
-
-const ACCELERATED_PERIODS = ['1M', '3M', '6M']
-const LONG_TERM_PERIODS = ['3M', '6M', '9M', '12M', '18M', '24M', '36M']
-
-function formatCondition(condition: string) {
-  const temp = Number(condition.split('-')[0]) as keyof typeof conditionDetails
-  const type = condition.includes('Accelerated') ? 'Accelerated' : 'Long-term'
-  return `${conditionDetails[temp] || condition} - ${type}`
 }
 
 // The Product name/Batch #/Period/Condition/Due date table — used standalone
@@ -84,7 +75,7 @@ export function WithdrawalTable() {
         }
 
         return Array.from(byCondition.entries()).flatMap(([condition, tests]) => {
-          const periods = condition.includes('Accelerated') ? ACCELERATED_PERIODS : LONG_TERM_PERIODS
+          const periods = getPeriodsForCondition(condition)
           return [...tests]
             .sort((a, b) => moment(a.date).diff(moment(b.date)))
             .map((test, index) => ({ test, period: periods[index] || '' }))

@@ -80,22 +80,45 @@
   animation: loadingBarSlide 1.1s ease-in-out infinite;
 }
 
-/* Printing a single record (Product Detail Modal → Last Submitted Results):
-   hide everything on the page except the marked printable block, regardless
-   of where it's nested (modal chrome, overlay, sidebar, etc). */
+/* Printing a single record (Product Detail Modal → Last Submitted Results, or
+   a Stability Report): hide everything except the one printable block whose
+   target matches the body class set by printSection() (src/utils/print.ts),
+   regardless of where it's nested (modal chrome, overlay, sidebar, etc). A
+   page/modal can contain more than one printable block, so scoping by target
+   keeps printing one from also printing the other. */
 @media print {
   body * {
     visibility: hidden;
   }
-  #printable-results,
-  #printable-results * {
+  body.print-target-results #printable-results,
+  body.print-target-results #printable-results * {
     visibility: visible;
   }
-  #printable-results {
+  body.print-target-results #printable-results {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     padding: 24px;
   }
+  body.print-target-report #printable-report,
+  body.print-target-report #printable-report * {
+    visibility: visible;
+  }
+  body.print-target-report #printable-report {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  @page {
+    size: landscape;
+  }
+}
+
+/* Diagonal hatching for stability-report cells that aren't due yet. */
+.report-hatched {
+  background-image: repeating-linear-gradient(45deg, #999 0, #999 1px, transparent 1px, transparent 6px);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
