@@ -161,13 +161,7 @@ export default function ProductsUnderTesting() {
                       <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
                         <div className="flex flex-col gap-1">
                           {batches.map(b => (
-                            <button
-                              key={b._id}
-                              onClick={() => setSelectedId(b._id)}
-                              className="underline decoration-dotted underline-offset-2 hover:opacity-75 cursor-pointer text-left"
-                            >
-                              {b.batchNumber}
-                            </button>
+                            <span key={b._id} className="py-2">{b.batchNumber}</span>
                           ))}
                         </div>
                       </td>
@@ -193,14 +187,19 @@ export default function ProductsUnderTesting() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap align-top">
-                        <Button
-                          variant="ghost"
-                          onClick={() => setSelectedId(batches[0]._id)}
-                          className="flex items-center gap-2 cursor-pointer"
-                        >
-                          <Eye size={16} />
-                          View product
-                        </Button>
+                        <div className="flex flex-col gap-1 items-end">
+                          {batches.map(b => (
+                            <Button
+                              key={b._id}
+                              variant="ghost"
+                              onClick={() => setSelectedId(b._id)}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <Eye size={16} />
+                              View batch
+                            </Button>
+                          ))}
+                        </div>
                       </td>
                     </tr>
                   ))}

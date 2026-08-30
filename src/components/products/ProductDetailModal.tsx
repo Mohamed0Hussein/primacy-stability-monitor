@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import moment from 'moment'
-import { Copy, Pencil, Printer } from 'lucide-react'
+import { Copy, FileText, Pencil, Printer } from 'lucide-react'
 
 import { useTheme } from '../../hooks/useTheme'
 import { Theme } from '../../themes/themes'
@@ -12,8 +13,6 @@ import { SpecificationForm } from '../specifications/SpecificationForm'
 import { SpecificationList } from '../specifications/SpecificationList'
 import { SubmittedResultsView } from '../specifications/SubmittedResultsView'
 import { TestResultForm } from '../specifications/TestResultForm'
-import { StabilityReportTable } from './StabilityReportTable'
-import { formatCondition } from '../../constants/stability_conditions'
 import { Specification, SubmittedResult } from '../../constants/specifications'
 import { addTestResult, updateProduct } from '../../utils/api/products'
 import { queryKeys } from '../../constants/query_keys'
@@ -52,6 +51,7 @@ interface ProductDetailModalProps {
 
 export function ProductDetailModal({ product, onClose }: ProductDetailModalProps) {
   const { theme } = useTheme()
+  const navigate = useNavigate()
   const { success, error: showError } = useToast()
   const queryClient = useQueryClient()
   const [editingResult, setEditingResult] = useState(false)
@@ -121,25 +121,6 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
           </button>
         </div>
 
-        <DetailSection title="Basic Information" theme={theme}>
-          <DetailGrid theme={theme}>
-            <DetailItem label="Dosage form" value={product.dosageForm} theme={theme} />
-            <DetailItem label="Strength" value={product.strength} theme={theme} />
-            <DetailItem label="Pack type" value={product.packType} theme={theme} />
-            <DetailItem label="Size" value={product.size} theme={theme} />
-            <DetailItem label="Conditions" value={product.conditions?.join(', ')} theme={theme} />
-          </DetailGrid>
-        </DetailSection>
-
-        <DetailSection title="Batch Information" theme={theme}>
-          <DetailGrid theme={theme}>
-            <DetailItem label="Batch type" value={product.batchType} theme={theme} />
-            <DetailItem label="Batch number" value={product.batchNumber} theme={theme} />
-            <DetailItem label="Batch size" value={product.batchSize} theme={theme} />
-            <DetailItem label="API batch numbers" value={product.apiBatchNumbers} theme={theme} />
-          </DetailGrid>
-        </DetailSection>
-
         <DetailSection title="Dates" theme={theme}>
           <DetailGrid theme={theme}>
             <DetailItem
@@ -203,23 +184,15 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
         </DetailSection>
 
         {(product.conditions || []).length > 0 && (
-          <DetailSection title="Stability Reports" theme={theme}>
-            <div id="printable-report" className="space-y-6">
-              {(product.conditions || []).map(condition => (
-                <div key={condition}>
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: theme.colors.textSecondary }}>
-                    {formatCondition(condition)}
-                  </p>
-                  <StabilityReportTable product={product} condition={condition} />
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end mt-4 print:hidden">
-              <Button variant="ghost" onClick={() => printSection('report')} className="flex items-center gap-2">
-                <Printer size={16} />
-                Print Reports
-              </Button>
-            </div>
+          <DetailSection title="Stability Report" theme={theme}>
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/product/${product._id}/report`)}
+              className="flex items-center gap-2"
+            >
+              <FileText size={16} />
+              View Full Stability Report
+            </Button>
           </DetailSection>
         )}
 

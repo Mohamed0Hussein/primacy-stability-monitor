@@ -115,10 +115,3 @@
     size: landscape;
   }
 }
-
-/* Diagonal hatching for stability-report cells that aren't due yet. */
-.report-hatched {
-  background-image: repeating-linear-gradient(45deg, #999 0, #999 1px, transparent 1px, transparent 6px);
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}

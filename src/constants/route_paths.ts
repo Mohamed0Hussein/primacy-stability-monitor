@@ -6,4 +6,5 @@ export default {
     'PRODUCTS_UNDER_TESTING':"/products-under-testing",
     'WITHDRAWAL_LIST':"/withdrawal-list",
     'TEST_DETAILS':"/product/:productId/tests",
+    'STABILITY_REPORT':"/product/:productId/report",
 }

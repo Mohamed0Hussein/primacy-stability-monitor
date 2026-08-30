@@ -10,6 +10,7 @@ import Dashboard from './views/Dashboard';
 import ProductsUnderTesting from './views/ProductsUnderTesting';
 import WithdrawalList from './views/WithdrawalList';
 import TestDetails from './views/TestDetails';
+import StabilityReport from './views/StabilityReport';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './contexts/AuthProvider';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -49,6 +50,11 @@ function App() {
               <Route path={ROUTE_PATHS.TEST_DETAILS} element={
                 <ProtectedRoute>
                   <TestDetails />
+                </ProtectedRoute>
+              } />
+              <Route path={ROUTE_PATHS.STABILITY_REPORT} element={
+                <ProtectedRoute>
+                  <StabilityReport />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<Navigate to={ROUTE_PATHS.DASHBOARD} replace />} />

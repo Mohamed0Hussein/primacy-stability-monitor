@@ -40,9 +40,13 @@ interface WithdrawalItem {
   date: moment.Moment
 }
 
+interface WithdrawalTableProps {
+  targetMonth?: moment.Moment
+}
+
 // The Product name/Batch #/Period/Condition/Due date table — used standalone
 // on the Withdrawal Schedule page and embedded directly on the Dashboard.
-export function WithdrawalTable() {
+export function WithdrawalTable({ targetMonth }: WithdrawalTableProps) {
   const { theme } = useTheme()
   const navigate = useNavigate()
 
@@ -54,12 +58,11 @@ export function WithdrawalTable() {
     },
   })
 
-  const now = moment()
+  const month = targetMonth || moment()
 
   const items = useMemo((): WithdrawalItem[] => {
     if (!Array.isArray(products)) return []
 
-    const currentMonth = moment()
     const hasResult = (product: Product, test: TestEntry) =>
       (product.testsResults || []).some(r => r.testId === test._id)
 
@@ -80,7 +83,7 @@ export function WithdrawalTable() {
             .sort((a, b) => moment(a.date).diff(moment(b.date)))
             .map((test, index) => ({ test, period: periods[index] || '' }))
         })
-          .filter(({ test }) => !hasResult(product, test) && moment(test.date).isSame(currentMonth, 'month'))
+          .filter(({ test }) => !hasResult(product, test) && moment(test.date).isSame(month, 'month'))
           .map(({ test, period }) => ({
             productId: product._id,
             testId: test._id,
@@ -92,7 +95,7 @@ export function WithdrawalTable() {
           }))
       })
       .sort((a, b) => a.date.diff(b.date))
-  }, [products])
+  }, [products, month])
 
   const getStatus = (date: moment.Moment) => {
     const diffDays = date.diff(moment().startOf('day'), 'days')
@@ -110,7 +113,7 @@ export function WithdrawalTable() {
       <Card className="p-8 text-center flex flex-col items-center justify-center gap-3">
         <CalendarCheck size={48} className="text-gray-300 dark:text-gray-600" />
         <p style={{ color: theme.colors.textSecondary }}>
-          No withdrawals scheduled for {now.format('MMMM YYYY')}.
+          No withdrawals scheduled for {month.format('MMMM YYYY')}.
         </p>
       </Card>
     )

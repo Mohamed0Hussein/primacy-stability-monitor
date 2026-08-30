@@ -133,7 +133,7 @@ export function StabilityReportTable({ product, condition }: StabilityReportTabl
               {periodColumns.map(({ test, label }) => {
                 const isFuture = moment(test.date).isAfter(moment(), 'day')
                 if (isFuture) {
-                  return <td key={test._id || label} className="border border-black p-2 report-hatched" />
+                  return <td key={test._id || label} className="border border-black p-2" />
                 }
                 return (
                   <td key={test._id || label} className="border border-black p-2 text-center whitespace-nowrap">
