@@ -18,6 +18,7 @@ interface TestEntry {
   _id?: string
   condition: string
   date: string
+  specificationIds?: string[]
 }
 
 interface Product {
@@ -83,23 +84,17 @@ export default function StabilityReport() {
   return (
     <div className="min-h-full p-8 pb-32 w-full" style={{ backgroundColor: theme.colors.background }}>
       <div className="w-full space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
-          <div>
-            <Button variant="ghost" onClick={() => navigate(-1)} className="mb-3 flex items-center gap-2">
-              <ArrowLeft size={16} />
-              Back
-            </Button>
-            <h1 className="text-2xl font-bold" style={{ color: theme.colors.text }}>
-              Stability Report — {product.productName}
-            </h1>
-            <p className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
-              Batch: {product.batchNumber || '—'}
-            </p>
-          </div>
-          <Button variant="primary" onClick={() => printSection('report')} className="flex items-center gap-2">
-            <Printer size={16} />
-            Print Report
+        <div className="print:hidden">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-3 flex items-center gap-2">
+            <ArrowLeft size={16} />
+            Back
           </Button>
+          <h1 className="text-2xl font-bold" style={{ color: theme.colors.text }}>
+            Stability Report — {product.productName}
+          </h1>
+          <p className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+            Batch: {product.batchNumber || '—'}
+          </p>
         </div>
 
         {(product.conditions || []).length === 0 ? (
@@ -107,15 +102,26 @@ export default function StabilityReport() {
             <p style={{ color: theme.colors.textSecondary }}>No conditions defined for this product.</p>
           </Card>
         ) : (
-          <div id="printable-report" className="space-y-8">
-            {(product.conditions || []).map((condition: string) => (
-              <div key={condition}>
-                <p className="text-xs font-semibold uppercase tracking-wide mb-2 print:hidden" style={{ color: theme.colors.textSecondary }}>
-                  {formatCondition(condition)}
-                </p>
-                <StabilityReportTable product={product} condition={condition} />
-              </div>
-            ))}
+          <div className="space-y-10">
+            {(product.conditions || []).map((condition: string) => {
+              const printId = `printable-report-${condition}`
+              return (
+                <div key={condition}>
+                  <div className="flex items-center justify-between mb-2 print:hidden">
+                    <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: theme.colors.textSecondary }}>
+                      {formatCondition(condition)}
+                    </p>
+                    <Button variant="ghost" onClick={() => printSection(printId)} className="flex items-center gap-2">
+                      <Printer size={16} />
+                      Print
+                    </Button>
+                  </div>
+                  <div id={printId}>
+                    <StabilityReportTable product={product} condition={condition} />
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

@@ -22,6 +22,7 @@ interface TestEntry {
   _id?: string
   condition: string
   date: string
+  specificationIds?: string[]
 }
 
 interface Product {
@@ -90,7 +91,7 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
     success('ID copied to clipboard')
   }
 
-  const handlePrint = () => printSection('results')
+  const handlePrint = () => printSection('printable-results')
 
   if (!product) return null
 
@@ -102,6 +103,9 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
     null
   )
   const latestTest = latestResult ? product.tests?.find(t => t._id === latestResult.testId) : undefined
+  const applicableSpecs = latestTest?.specificationIds
+    ? (product.specifications || []).filter(s => latestTest.specificationIds!.includes(s.id))
+    : (product.specifications || [])
 
   return (
     <Modal
@@ -145,7 +149,7 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
           {latestResult ? (
             editingResult ? (
               <TestResultForm
-                specifications={product.specifications || []}
+                specifications={applicableSpecs}
                 initialValues={latestResult as unknown as Record<string, string>}
                 submitLabel="Save Correction"
                 isSubmitting={correctResultMutation.isPending}
@@ -160,7 +164,7 @@ export function ProductDetailModal({ product, onClose }: ProductDetailModalProps
                   <p className="text-sm">Batch: {product.batchNumber} · ID: {product._id}</p>
                   {latestTest && <p className="text-sm">{latestTest.condition.replace('-', ' - ')}</p>}
                 </div>
-                <SubmittedResultsView result={latestResult} specifications={product.specifications || []} />
+                <SubmittedResultsView result={latestResult} specifications={applicableSpecs} />
                 <div className="flex gap-3 justify-end mt-4 print:hidden">
                   <Button variant="ghost" onClick={handlePrint} className="flex items-center gap-2">
                     <Printer size={16} />

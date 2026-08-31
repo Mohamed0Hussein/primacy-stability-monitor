@@ -6,6 +6,7 @@ interface TestEntry {
   _id?: string
   condition: string
   date: string
+  specificationIds?: string[]
 }
 
 interface StabilityReportProduct {
@@ -111,7 +112,10 @@ export function StabilityReportTable({ product, condition }: StabilityReportTabl
           </tr>
           <tr>
             {periodColumns.map(({ test, label }) => (
-              <th key={test._id || label} className="border border-black p-2 whitespace-nowrap">{label}</th>
+              <th key={test._id || label} className="border border-black p-2 whitespace-nowrap">
+                <div>{label}</div>
+                <div className="font-normal text-[10px]">{moment(test.date).format('DD/MM/YYYY')}</div>
+              </th>
             ))}
           </tr>
         </thead>
@@ -131,6 +135,14 @@ export function StabilityReportTable({ product, condition }: StabilityReportTabl
                   : [spec.specification, spec.reference].filter(Boolean).join(' - ')}
               </td>
               {periodColumns.map(({ test, label }) => {
+                const applies = !test.specificationIds || test.specificationIds.includes(spec.id)
+                if (!applies) {
+                  return (
+                    <td key={test._id || label} className="border border-black p-2 text-center bg-gray-100">
+                      —
+                    </td>
+                  )
+                }
                 const isFuture = moment(test.date).isAfter(moment(), 'day')
                 if (isFuture) {
                   return <td key={test._id || label} className="border border-black p-2" />

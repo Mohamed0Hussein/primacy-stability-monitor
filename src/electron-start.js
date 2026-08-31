@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import pkg from 'electron-updater';
@@ -71,6 +71,12 @@ function createWindow() {
 }
 
 app.on('ready', () => {
+  // Default File/Edit/View/Window/Help menu bar is only useful during
+  // development (DevTools shortcuts etc.) — hide it from real users.
+  if (app.isPackaged) {
+    Menu.setApplicationMenu(null);
+  }
+
   createWindow();
 
   if (app.isPackaged) {

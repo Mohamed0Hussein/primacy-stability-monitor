@@ -16,12 +16,12 @@ import { Grid, Field } from '../components/common/FormLayout'
 import { SpecificationForm } from '../components/specifications/SpecificationForm'
 import { SpecificationList } from '../components/specifications/SpecificationList'
 import { Specification } from '../constants/specifications'
-import { conditionDetails } from '../constants/stability_conditions'
+import { conditionDetails, formatCondition } from '../constants/stability_conditions'
 import { insertProduct } from '../utils/api/products'
 import { queryKeys } from '../constants/query_keys'
 import ROUTE_PATHS from '../constants/route_paths'
 
-const steps = ['Basic Info', 'Batch', 'Dates', 'Tests/Specifications']
+const steps = ['Basic Info', 'Batch', 'Dates', 'Tests/Specifications', 'Test Schedule']
 
 type Errors = Partial<Record<string, string>>
 
@@ -122,8 +122,22 @@ const InsertNewProduct = () => {
     batchType: '',
     batches: [createEmptyBatch()] as Batch[],
 
-    specifications: [] as Specification[]
+    specifications: [] as Specification[],
+    // Which specifications apply at each scheduled test date — keyed by
+    // `${condition}__${YYYY-MM-DD}`. Missing key = every spec applies
+    // (the default, until customized in the Test Schedule step).
+    testSpecMap: {} as Record<string, string[]>,
   })
+
+  const testKey = (condition: string, date: Moment) => `${condition}__${date.format('YYYY-MM-DD')}`
+
+  const toggleSpecForTest = (key: string, specId: string) => {
+    setData(d => {
+      const current = d.testSpecMap[key] ?? d.specifications.map(s => s.id)
+      const next = current.includes(specId) ? current.filter(id => id !== specId) : [...current, specId]
+      return { ...d, testSpecMap: { ...d.testSpecMap, [key]: next } }
+    })
+  }
 
   const updateBatch = (id: string, patch: Partial<Batch>) => {
     setData(d => ({ ...d, batches: d.batches.map(b => (b.id === id ? { ...b, ...patch } : b)) }))
@@ -220,7 +234,11 @@ const InsertNewProduct = () => {
   const submit = async () => {
     if (!validateStep()) return
 
-    const tests = buildTests();
+    const allSpecIds = data.specifications.map(s => s.id)
+    const tests = buildTests().map(t => ({
+      ...t,
+      specificationIds: data.testSpecMap[testKey(t.condition, t.date)] ?? allSpecIds,
+    }));
     setIsSubmitting(true)
 
     try {
@@ -499,6 +517,92 @@ const InsertNewProduct = () => {
                 <SpecificationForm
                   onAdd={(spec) => setData(d => ({ ...d, specifications: [...d.specifications, spec] }))}
                 />
+              </Section>
+            )}
+
+            {/* STEP 5: Test Schedule */}
+            {step === 4 && (
+              <Section
+                icon={<ClipboardList size={18} />}
+                title="Test Schedule"
+                theme={theme}
+              >
+                {data.specifications.length === 0 ? (
+                  <p style={{ color: theme.colors.textSecondary }}>
+                    No specifications were added — go back to add at least one before assigning a test schedule.
+                  </p>
+                ) : data.conditions.length === 0 ? (
+                  <p style={{ color: theme.colors.textSecondary }}>
+                    No conditions were selected — go back to Basic Info to select storage conditions.
+                  </p>
+                ) : (
+                  <div className="space-y-8">
+                    <p style={{ color: theme.colors.textSecondary }}>
+                      Uncheck a specification for a test date if it shouldn't be tested at that point. By default every specification is tested at every date.
+                    </p>
+                    {data.conditions.map(condition => {
+                      const tests = buildTests()
+                        .filter(t => t.condition === condition)
+                        .sort((a, b) => a.date.diff(b.date))
+                      const anchor = tests[0]?.date
+                      return (
+                        <div key={condition}>
+                          <h4 className="font-medium mb-3" style={{ color: theme.colors.text }}>
+                            {formatCondition(condition)}
+                          </h4>
+                          <div className="overflow-x-auto">
+                            <table className="text-sm border-collapse" style={{ minWidth: 480 }}>
+                              <thead>
+                                <tr>
+                                  <th
+                                    className="text-left px-3 py-2 font-semibold whitespace-nowrap border-b"
+                                    style={{ color: theme.colors.textSecondary, borderColor: theme.colors.border }}
+                                  >
+                                    Test date
+                                  </th>
+                                  {data.specifications.map((spec, specIndex) => (
+                                    <th
+                                      key={spec.id}
+                                      className="px-3 py-2 font-semibold whitespace-nowrap border-b text-center"
+                                      style={{ color: theme.colors.textSecondary, borderColor: theme.colors.border }}
+                                    >
+                                      {specIndex + 1}. {spec.testName}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {tests.map(test => {
+                                  const months = anchor ? test.date.diff(anchor, 'months') : 0
+                                  const label = months === 0 ? 'Initial' : `${months}M`
+                                  const key = testKey(condition, test.date)
+                                  const selected = data.testSpecMap[key] ?? data.specifications.map(s => s.id)
+                                  return (
+                                    <tr key={key} className="border-b" style={{ borderColor: theme.colors.border }}>
+                                      <td className="px-3 py-2 whitespace-nowrap" style={{ color: theme.colors.text }}>
+                                        {label} — {test.date.format('DD/MM/YYYY')}
+                                      </td>
+                                      {data.specifications.map(spec => (
+                                        <td key={spec.id} className="px-3 py-2 text-center">
+                                          <input
+                                            type="checkbox"
+                                            checked={selected.includes(spec.id)}
+                                            onChange={() => toggleSpecForTest(key, spec.id)}
+                                            style={{ accentColor: theme.colors.primary }}
+                                          />
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </Section>
             )}
           </Card>

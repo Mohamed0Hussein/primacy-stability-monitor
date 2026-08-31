@@ -36,6 +36,7 @@ interface Test {
   date: string
   status: 'pending' | 'completed' | 'overdue'
   results?: TestResult[]
+  specificationIds?: string[]
 }
 
 interface Product {
@@ -405,6 +406,9 @@ function TestCard({
   const statusConfig = getStatusConfig(test.computedStatus)
   const StatusIcon = statusConfig.icon
   const isExpanded = expandedTest === test.key
+  const applicableSpecs: Specification[] = test.specificationIds
+    ? specifications.filter(s => test.specificationIds.includes(s.id))
+    : specifications
 
   return (
     <Card
@@ -482,11 +486,11 @@ function TestCard({
                   null
                 ) || { testId: test._id || '' }
               }
-              specifications={specifications}
+              specifications={applicableSpecs}
             />
           ) : isUpcoming ? (
             <TestResultForm 
-              specifications={specifications} 
+              specifications={applicableSpecs} 
               onSubmit={onSubmit}
               isSubmitting={isSubmitting}
             />
@@ -496,7 +500,7 @@ function TestCard({
               <p>This test is overdue. Please enter results as soon as possible.</p>
               <div className="mt-4">
                 <TestResultForm 
-                  specifications={specifications} 
+                  specifications={applicableSpecs} 
                   onSubmit={onSubmit}
                   isSubmitting={isSubmitting}
                 />

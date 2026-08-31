@@ -149,59 +149,46 @@ export default function ProductsUnderTesting() {
                   </tr>
                 </thead>
                 <tbody>
-                  {productGroups.map((batches) => (
-                    <tr
-                      key={batches[0].productName}
-                      className="border-t"
-                      style={{ borderColor: theme.colors.border }}
-                    >
-                      <td className="px-4 py-3 font-medium whitespace-nowrap align-top" style={{ color: theme.colors.text }}>
-                        {batches[0].productName}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
-                        <div className="flex flex-col gap-1">
-                          {batches.map(b => (
-                            <span key={b._id} className="py-2">{b.batchNumber}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
-                        <div className="flex flex-col gap-1">
-                          {batches.map(b => (
-                            <span key={b._id}>{formatConditionsList(b.conditions)}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
-                        <div className="flex flex-col gap-1">
-                          {batches.map(b => (
-                            <span key={b._id}>{formatDate(b.stabilityDate)}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: theme.colors.textSecondary }}>
-                        <div className="flex flex-col gap-1">
-                          {batches.map(b => (
-                            <span key={b._id}>{formatDate(b.expiryDate)}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap align-top">
-                        <div className="flex flex-col gap-1 items-end">
-                          {batches.map(b => (
-                            <Button
-                              key={b._id}
-                              variant="ghost"
-                              onClick={() => setSelectedId(b._id)}
-                              className="flex items-center gap-2 cursor-pointer"
-                            >
-                              <Eye size={16} />
-                              View batch
-                            </Button>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
+                  {productGroups.flatMap((batches) => (
+                    batches.map((b, i) => (
+                      <tr
+                        key={b._id}
+                        className="border-t"
+                        style={{ borderColor: theme.colors.border }}
+                      >
+                        {i === 0 && (
+                          <td
+                            rowSpan={batches.length}
+                            className="px-4 py-3 font-medium whitespace-nowrap align-top"
+                            style={{ color: theme.colors.text }}
+                          >
+                            {batches[0].productName}
+                          </td>
+                        )}
+                        <td className="px-4 py-3 whitespace-nowrap" style={{ color: theme.colors.textSecondary }}>
+                          {b.batchNumber}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap" style={{ color: theme.colors.textSecondary }}>
+                          {formatConditionsList(b.conditions)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap" style={{ color: theme.colors.textSecondary }}>
+                          {formatDate(b.stabilityDate)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap" style={{ color: theme.colors.textSecondary }}>
+                          {formatDate(b.expiryDate)}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <Button
+                            variant="ghost"
+                            onClick={() => navigate(`/product/${b._id}/report`)}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Eye size={16} />
+                            View batch
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
                   ))}
                 </tbody>
               </table>
