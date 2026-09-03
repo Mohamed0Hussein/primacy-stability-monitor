@@ -10,12 +10,14 @@ import { Card } from '../common/Card'
 import { getProducts } from '../../utils/api/products'
 import { queryKeys } from '../../constants/query_keys'
 import { formatCondition, getPeriodsForCondition } from '../../constants/stability_conditions'
+import { Specification } from '../../constants/specifications'
 import LoadingSpinner from '../common/LoadingSpinner'
 
 interface TestEntry {
   _id?: string
   condition: string
   date: string
+  specificationIds?: string[]
 }
 
 interface TestResultEntry {
@@ -28,6 +30,7 @@ interface Product {
   batchNumber: string
   tests?: TestEntry[]
   testsResults?: TestResultEntry[]
+  specifications?: Specification[]
 }
 
 interface WithdrawalItem {
@@ -38,6 +41,7 @@ interface WithdrawalItem {
   condition: string
   period: string
   date: moment.Moment
+  specNumbers: number[]
 }
 
 interface WithdrawalTableProps {
@@ -84,15 +88,23 @@ export function WithdrawalTable({ targetMonth }: WithdrawalTableProps) {
             .map((test, index) => ({ test, period: periods[index] || '' }))
         })
           .filter(({ test }) => !hasResult(product, test) && moment(test.date).isSame(month, 'month'))
-          .map(({ test, period }) => ({
-            productId: product._id,
-            testId: test._id,
-            productName: product.productName,
-            batchNumber: product.batchNumber,
-            condition: test.condition,
-            period,
-            date: moment(test.date),
-          }))
+          .map(({ test, period }) => {
+            const specs = product.specifications || []
+            const dueIds = test.specificationIds ?? specs.map(s => s.id)
+            const specNumbers = specs
+              .map((s, i) => (dueIds.includes(s.id) ? i + 1 : null))
+              .filter((n): n is number => n !== null)
+            return {
+              productId: product._id,
+              testId: test._id,
+              productName: product.productName,
+              batchNumber: product.batchNumber,
+              condition: test.condition,
+              period,
+              date: moment(test.date),
+              specNumbers,
+            }
+          })
       })
       .sort((a, b) => a.date.diff(b.date))
   }, [products, month])
@@ -128,7 +140,7 @@ export function WithdrawalTable({ targetMonth }: WithdrawalTableProps) {
               {['Product name', 'Batch #', 'Period', 'Condition', 'Due date', 'Status', ''].map(h => (
                 <th
                   key={h}
-                  className="text-left px-4 py-3 font-semibold whitespace-nowrap"
+                  className={`text-left px-4 py-3 font-semibold whitespace-nowrap${h === '' ? ' print:hidden' : ''}`}
                   style={{ color: theme.colors.textSecondary }}
                 >
                   {h}
@@ -156,6 +168,11 @@ export function WithdrawalTable({ targetMonth }: WithdrawalTableProps) {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap" style={{ color: theme.colors.textSecondary }}>
                     {formatCondition(item.condition)}
+                    {item.specNumbers.length > 0 && (
+                      <span className="ml-1" style={{ color: theme.colors.text }}>
+                        ({item.specNumbers.join(', ')})
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap" style={{ color: theme.colors.textSecondary }}>
                     {item.date.format('DD/MM/YYYY')}
@@ -168,7 +185,7 @@ export function WithdrawalTable({ targetMonth }: WithdrawalTableProps) {
                       {status.label}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <td className="px-4 py-3 text-right whitespace-nowrap print:hidden">
                     <Button
                       variant="ghost"
                       onClick={() => navigate(`/product/${item.productId}/tests${item.testId ? `?testId=${item.testId}` : ''}`)}

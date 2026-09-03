@@ -169,7 +169,6 @@ const InsertNewProduct = () => {
       if (!data.dosageForm) e.dosageForm = 'Required'
       if (!data.strength) e.strength = 'Required'
       if (!data.packType) e.packType = 'Required'
-      if (data.conditions.length === 0) e.conditions = 'Required'
     }
 
     if (step === 1) {
@@ -187,6 +186,10 @@ const InsertNewProduct = () => {
         if (!b.stabilityDate) e[`stabilityDate_${b.id}`] = 'Required'
         if (!b.expiryDate) e[`expiryDate_${b.id}`] = 'Required'
       })
+    }
+
+    if (step === 4) {
+      if (data.conditions.length === 0) e.conditions = 'Required'
     }
 
     setErrors(e)
@@ -344,18 +347,6 @@ const InsertNewProduct = () => {
                       onChange={e =>
                         setData(d => ({ ...d, packType: Array.isArray(e) ? e[0] : e }))
                       }
-                    />
-                  </Field>
-                  <Field label="Conditions" error={errors.conditions} theme={theme}>
-                    <Pick
-                      options={conditionsOptions}
-                      value={data.conditions}
-                      multiple={true}
-                      placeholder="Select conditions..."
-                      onChange={e => {
-                        const val = Array.isArray(e) ? e : [e];
-                        setData(d => ({ ...d, conditions: val }))
-                      }}
                     />
                   </Field>
                   <Field label="Size" error={errors.size} theme={theme}>
@@ -527,13 +518,28 @@ const InsertNewProduct = () => {
                 title="Test Schedule"
                 theme={theme}
               >
+                <div className="mb-6 max-w-sm">
+                  <Field label="Conditions" error={errors.conditions} theme={theme}>
+                    <Pick
+                      options={conditionsOptions}
+                      value={data.conditions}
+                      multiple={true}
+                      placeholder="Select conditions..."
+                      onChange={e => {
+                        const val = Array.isArray(e) ? e : [e];
+                        setData(d => ({ ...d, conditions: val }))
+                      }}
+                    />
+                  </Field>
+                </div>
+
                 {data.specifications.length === 0 ? (
                   <p style={{ color: theme.colors.textSecondary }}>
                     No specifications were added — go back to add at least one before assigning a test schedule.
                   </p>
                 ) : data.conditions.length === 0 ? (
                   <p style={{ color: theme.colors.textSecondary }}>
-                    No conditions were selected — go back to Basic Info to select storage conditions.
+                    Select at least one storage condition above to build a test schedule.
                   </p>
                 ) : (
                   <div className="space-y-8">

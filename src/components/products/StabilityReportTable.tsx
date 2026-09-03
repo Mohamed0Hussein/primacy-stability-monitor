@@ -68,7 +68,7 @@ export function StabilityReportTable({ product, condition }: StabilityReportTabl
         {product.productName}{product.strength ? ` ${product.strength}` : ''}
       </h2>
 
-      <table className="w-full border-collapse border border-black text-xs">
+      <table className="w-full border-collapse border-3 border-black text-xs">
         <tbody>
           <tr>
             <td className="border border-black p-2 font-semibold w-1/4">Product Name</td>
@@ -103,7 +103,7 @@ export function StabilityReportTable({ product, condition }: StabilityReportTabl
         </tbody>
       </table>
 
-      <table className="w-full border-collapse border border-black text-xs">
+      <table className="w-full border-collapse border-2 border-black text-xs">
         <thead>
           <tr>
             <th rowSpan={2} className="border border-black p-2 align-middle">Parameters</th>

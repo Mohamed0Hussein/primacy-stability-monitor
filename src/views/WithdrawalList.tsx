@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import moment from 'moment'
+import { Printer } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
+import { Button } from '../components/common/Button'
 import { MonthPicker } from '../components/common/MonthPicker'
 import { WithdrawalTable } from '../components/withdrawal/WithdrawalTable'
+import { printSection } from '../utils/print'
 
 export default function WithdrawalList() {
   const { theme } = useTheme()
@@ -22,10 +25,24 @@ export default function WithdrawalList() {
               {monthStart.format('DD/MM/YYYY')} - {monthEnd.format('DD/MM/YYYY')}
             </p>
           </div>
-          <MonthPicker value={targetMonth} onChange={setTargetMonth} />
+          <div className="flex items-center gap-2">
+            <MonthPicker value={targetMonth} onChange={setTargetMonth} />
+            <Button variant="ghost" onClick={() => printSection('printable-withdrawal')} className="flex items-center gap-2">
+              <Printer size={16} />
+              Print
+            </Button>
+          </div>
         </div>
 
-        <WithdrawalTable targetMonth={targetMonth} />
+        <div id="printable-withdrawal">
+          <h2 className="hidden print:block text-xl font-bold mb-1 text-black">
+            Monthly Withdrawal List — {targetMonth.format('MMMM YYYY')}
+          </h2>
+          <p className="hidden print:block text-sm mb-4 text-black">
+            {monthStart.format('DD/MM/YYYY')} - {monthEnd.format('DD/MM/YYYY')}
+          </p>
+          <WithdrawalTable targetMonth={targetMonth} />
+        </div>
       </div>
     </div>
   )
