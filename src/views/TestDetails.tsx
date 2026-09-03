@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import moment from 'moment'
@@ -61,7 +61,6 @@ export default function TestDetails() {
 
   const [expandedTest, setExpandedTest] = useState<string | null>(null)
   const targetTestId = searchParams.get('testId')
-  const didAutoExpand = useRef(false)
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: [queryKeys.get_products],
@@ -139,20 +138,11 @@ export default function TestDetails() {
     }
   }, [product])
 
-  // Deep-link from the Withdrawal Schedule: expand and scroll to a specific
-  // test once, then leave it alone so the user can freely collapse it.
-  useEffect(() => {
-    if (!targetTestId || didAutoExpand.current) return
-
-    const match = [...groupedTests.upcoming, ...groupedTests.past].find(t => t._id === targetTestId)
-    if (!match) return
-
-    didAutoExpand.current = true
-    setExpandedTest(match.key)
-    requestAnimationFrame(() => {
-      document.getElementById(`test-${match.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
-  }, [targetTestId, groupedTests])
+  // Deep-link from the Withdrawal Schedule: focus on just that one test.
+  const targetTest = useMemo(
+    () => (targetTestId ? [...groupedTests.upcoming, ...groupedTests.past].find(t => t._id === targetTestId) : undefined),
+    [targetTestId, groupedTests]
+  )
 
   if (isLoading) {
     return (
@@ -207,10 +197,11 @@ export default function TestDetails() {
           {/* Back Button */}
           <Button
             variant="ghost"
-            className="mb-6"
+            size="lg"
+            className="mb-6 font-bold"
             onClick={() => navigate(ROUTE_PATHS.DASHBOARD)}
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={20} />
             Back to Dashboard
           </Button>
 
@@ -277,79 +268,112 @@ export default function TestDetails() {
       {/* Tests Content */}
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
-        {/* Upcoming Tests */}
-        <section>
-          <h2
-            className="text-xl font-semibold mb-4 flex items-center gap-2"
-            style={{ color: theme.colors.text }}
-          >
-            <Clock size={20} style={{ color: theme.colors.warning }} />
-            Upcoming Tests
-            <span
-              className="text-sm font-normal ml-2 px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: theme.colors.surfaceVariant, color: theme.colors.textSecondary }}
-            >
-              {groupedTests.upcoming.length}
-            </span>
-          </h2>
-
-          {groupedTests.upcoming.length > 0 ? (
-            <div className="space-y-3">
-              {groupedTests.upcoming.map((test: EnrichedTest) => (
-                <TestCard 
-                  key={test.key} 
-                  test={test} 
-                  isUpcoming={true} 
-                  expandedTest={expandedTest}
-                  onToggleExpand={(key) => setExpandedTest(prev => prev === key ? null : key)}
-                  specifications={product.specifications || []}
-                  onSubmit={(results) => submitMutation.mutate({ testId: test._id!, results })}
-                  isSubmitting={submitMutation.isPending}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="p-8 text-center">
-              <CheckCircle2 size={48} className="mx-auto mb-3" style={{ color: theme.colors.success }} />
-              <p style={{ color: theme.colors.textSecondary }}>
-                No upcoming tests scheduled.
-              </p>
-            </Card>
-          )}
-        </section>
-
-        {/* Past Tests */}
-        {groupedTests.past.length > 0 && (
+        {targetTestId ? (
+          /* Deep-link from Withdrawal Schedule: just the due test's input, nothing else */
           <section>
             <h2
               className="text-xl font-semibold mb-4 flex items-center gap-2"
               style={{ color: theme.colors.text }}
             >
-              <CheckCircle2 size={20} style={{ color: theme.colors.success }} />
-              Past Tests
-              <span
-                className="text-sm font-normal ml-2 px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: theme.colors.surfaceVariant, color: theme.colors.textSecondary }}
-              >
-                {groupedTests.past.length}
-              </span>
+              <Clock size={20} style={{ color: theme.colors.warning }} />
+              Enter Result
             </h2>
 
-            <div className="space-y-3">
-              {groupedTests.past.map((test: EnrichedTest) => (
-                <TestCard 
-                  key={test.key} 
-                  test={test} 
-                  isUpcoming={false}
-                  expandedTest={expandedTest}
-                  onToggleExpand={(key) => setExpandedTest(prev => prev === key ? null : key)}
-                  specifications={product.specifications || []}
-                  onSubmit={() => {}} 
-                  isSubmitting={false}
-                />
-              ))}
-            </div>
+            {targetTest ? (
+              <TestCard
+                key={targetTest.key}
+                test={targetTest}
+                isUpcoming={targetTest.computedStatus !== 'completed'}
+                expandedTest={targetTest.key}
+                onToggleExpand={() => {}}
+                specifications={product.specifications || []}
+                onSubmit={(results) => submitMutation.mutate({ testId: targetTest._id!, results })}
+                isSubmitting={submitMutation.isPending}
+              />
+            ) : (
+              <Card className="p-8 text-center">
+                <AlertCircle size={48} className="mx-auto mb-3" style={{ color: theme.colors.error }} />
+                <p style={{ color: theme.colors.textSecondary }}>Test not found.</p>
+              </Card>
+            )}
           </section>
+        ) : (
+          <>
+            {/* Upcoming Tests */}
+            <section>
+              <h2
+                className="text-xl font-semibold mb-4 flex items-center gap-2"
+                style={{ color: theme.colors.text }}
+              >
+                <Clock size={20} style={{ color: theme.colors.warning }} />
+                Upcoming Tests
+                <span
+                  className="text-sm font-normal ml-2 px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: theme.colors.surfaceVariant, color: theme.colors.textSecondary }}
+                >
+                  {groupedTests.upcoming.length}
+                </span>
+              </h2>
+
+              {groupedTests.upcoming.length > 0 ? (
+                <div className="space-y-3">
+                  {groupedTests.upcoming.map((test: EnrichedTest) => (
+                    <TestCard
+                      key={test.key}
+                      test={test}
+                      isUpcoming={true}
+                      expandedTest={expandedTest}
+                      onToggleExpand={(key) => setExpandedTest(prev => prev === key ? null : key)}
+                      specifications={product.specifications || []}
+                      onSubmit={(results) => submitMutation.mutate({ testId: test._id!, results })}
+                      isSubmitting={submitMutation.isPending}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-8 text-center">
+                  <CheckCircle2 size={48} className="mx-auto mb-3" style={{ color: theme.colors.success }} />
+                  <p style={{ color: theme.colors.textSecondary }}>
+                    No upcoming tests scheduled.
+                  </p>
+                </Card>
+              )}
+            </section>
+
+            {/* Past Tests */}
+            {groupedTests.past.length > 0 && (
+              <section>
+                <h2
+                  className="text-xl font-semibold mb-4 flex items-center gap-2"
+                  style={{ color: theme.colors.text }}
+                >
+                  <CheckCircle2 size={20} style={{ color: theme.colors.success }} />
+                  Past Tests
+                  <span
+                    className="text-sm font-normal ml-2 px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: theme.colors.surfaceVariant, color: theme.colors.textSecondary }}
+                  >
+                    {groupedTests.past.length}
+                  </span>
+                </h2>
+
+                <div className="space-y-3">
+                  {groupedTests.past.map((test: EnrichedTest) => (
+                    <TestCard
+                      key={test.key}
+                      test={test}
+                      isUpcoming={false}
+                      expandedTest={expandedTest}
+                      onToggleExpand={(key) => setExpandedTest(prev => prev === key ? null : key)}
+                      specifications={product.specifications || []}
+                      onSubmit={() => {}}
+                      isSubmitting={false}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
       </div>
     </div>
