@@ -16,7 +16,8 @@ import { Grid, Field } from '../components/common/FormLayout'
 import { SpecificationForm } from '../components/specifications/SpecificationForm'
 import { SpecificationList } from '../components/specifications/SpecificationList'
 import { Specification } from '../constants/specifications'
-import { conditionDetails, formatCondition } from '../constants/stability_conditions'
+import { formatCondition } from '../constants/stability_conditions'
+import { packTypes, dosageForm, conditionsOptions } from '../constants/product_options'
 import { insertProduct } from '../utils/api/products'
 import { queryKeys } from '../constants/query_keys'
 import ROUTE_PATHS from '../constants/route_paths'
@@ -46,62 +47,6 @@ const createEmptyBatch = (): Batch => ({
   stabilityDate: null,
   expiryDate: null,
 })
-
-const packTypes = [
-  [
-    "PVC/Clear",
-    "PVC/PVDC",
-    "PVC/Aclar",
-    "PVC/PE/PVDC",
-    "ALU/ALU",
-    "Glass bottle clear",
-  ],
-  [
-    "PVC/Clear - white",
-    "PVC/PVDC - white",
-    "PVC/Aclar - white",
-    "PVC/PE/PVDC - white",
-    "ALU/ALU - white",
-    "Glass bottle clear - white",
-    "Polyethylene  (HDPE) bottle white With Polypropylene cap white",
-    "Aluminum tube laminated",
-    "Polypropylene tube"
-  ],
-  [
-    "Amber glass bottle",
-    "Glass ampule clear",
-    "Glass ampule amber",
-  ]
-]
-
-const dosageForm = [
-  "Immediate release tablet",
-  "Extended release tablet",
-  "Hard gelatin capsule",
-  "Enteric coated tablet",
-  "Fast melting tablet",
-  "Syrup",
-  "Oral solution",
-  "Suspension",
-  "Emulsion",
-  "Injection",
-  "Cream",
-  "Ointment",
-  "Gel",
-  "Dry syrup",
-  "Powder",
-  "Soft gelatin capsule",
-]
-
-const baseTemperatures = [5, 25, 30, 40] as const
-const conditionTypes = ['Accelerated', 'Long-term'] as const
-
-const conditionsOptions = baseTemperatures.flatMap(temp =>
-  conditionTypes.map(type => ({
-    label: `${conditionDetails[temp]} - ${type}`,
-    value: `${temp}-${type}`
-  }))
-)
 
 const InsertNewProduct = () => {
   const { theme } = useTheme()
@@ -201,33 +146,26 @@ const InsertNewProduct = () => {
     setStep(s => s + 1)
   }
 
-  const buildTests = () => {
+  // Schedule anchor: the actual stability start date entered for the batch,
+  // not the day the product happens to be inserted into the system. When
+  // that date is close to today the result looks the same as before (Initial
+  // lands ~today either way) — this just also handles backdated or
+  // future-dated stability starts correctly.
+  const scheduleAnchor = (data.batches[0]?.stabilityDate ? moment(data.batches[0].stabilityDate) : moment()).startOf('day')
+
+  const buildTests = (anchor: Moment) => {
     const tests: { condition: string; date: Moment }[] = [];
 
     data.conditions.forEach(condition => {
-      let datesForCondition: Moment[] = [];
+      let offsets: number[] = [];
 
       if (condition.includes('Accelerated')) {
-        datesForCondition = [
-          moment().startOf('day'), // Initial
-          moment().add(1, 'months').startOf('day'),
-          moment().add(3, 'months').startOf('day'),
-          moment().add(6, 'months').startOf('day'),
-        ];
+        offsets = [0, 1, 3, 6];
       } else if (condition.includes('Long-term')) {
-        datesForCondition = [
-          moment().startOf('day'), // Initial
-          moment().add(3, 'months').startOf('day'),
-          moment().add(6, 'months').startOf('day'),
-          moment().add(9, 'months').startOf('day'),
-          moment().add(12, 'months').startOf('day'),
-          moment().add(18, 'months').startOf('day'),
-          moment().add(24, 'months').startOf('day'),
-          moment().add(36, 'months').startOf('day'),
-        ];
+        offsets = [0, 3, 6, 9, 12, 18, 24, 36];
       }
 
-      datesForCondition.forEach(d => tests.push({ condition, date: d }));
+      offsets.forEach(months => tests.push({ condition, date: anchor.clone().add(months, 'months').startOf('day') }));
     });
 
     tests.sort((a, b) => a.date.diff(b.date));
@@ -238,7 +176,7 @@ const InsertNewProduct = () => {
     if (!validateStep()) return
 
     const allSpecIds = data.specifications.map(s => s.id)
-    const tests = buildTests().map(t => ({
+    const tests = buildTests(scheduleAnchor).map(t => ({
       ...t,
       specificationIds: data.testSpecMap[testKey(t.condition, t.date)] ?? allSpecIds,
     }));
@@ -547,7 +485,7 @@ const InsertNewProduct = () => {
                       Uncheck a specification for a test date if it shouldn't be tested at that point. By default every specification is tested at every date.
                     </p>
                     {data.conditions.map(condition => {
-                      const tests = buildTests()
+                      const tests = buildTests(scheduleAnchor)
                         .filter(t => t.condition === condition)
                         .sort((a, b) => a.date.diff(b.date))
                       const anchor = tests[0]?.date

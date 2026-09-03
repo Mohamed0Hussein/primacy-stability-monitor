@@ -3,12 +3,13 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import moment from 'moment';
-import { AlertTriangle, Eye, FlaskConical, Plus } from 'lucide-react';
+import { AlertTriangle, Eye, FlaskConical, Pencil, Plus } from 'lucide-react';
 
 import { useTheme } from '../hooks/useTheme';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { ProductDetailModal } from '../components/products/ProductDetailModal';
+import { EditProductModal, EditableProduct } from '../components/products/EditProductModal';
 import { formatConditionsList } from '../constants/stability_conditions';
 import { Specification } from '../constants/specifications';
 import { getProducts } from '../utils/api/products';
@@ -16,21 +17,18 @@ import { queryKeys } from '../constants/query_keys';
 import ROUTE_PATHS from '../constants/route_paths';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
-interface Product {
-  _id: string;
-  productName: string;
-  batchNumber: string;
-  conditions?: string[];
+interface Product extends EditableProduct {
   specifications?: Specification[];
   testsResults?: { createdAt?: string }[];
-  stabilityDate?: string;
-  expiryDate?: string;
+  editHistory?: { editedAt: string }[];
+  updatedAt?: string;
 }
 
 export default function ProductsUnderTesting() {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: [queryKeys.get_products],
@@ -53,6 +51,11 @@ export default function ProductsUnderTesting() {
   const selectedProduct = useMemo(
     () => sortedProducts.find((p: Product) => p._id === selectedId) || null,
     [sortedProducts, selectedId]
+  );
+
+  const editingProduct = useMemo(
+    () => sortedProducts.find((p: Product) => p._id === editingId) || null,
+    [sortedProducts, editingId]
   );
 
   const productGroups = useMemo(() => {
@@ -166,7 +169,18 @@ export default function ProductsUnderTesting() {
                           </td>
                         )}
                         <td className="px-4 py-3 whitespace-nowrap" style={{ color: theme.colors.textSecondary }}>
-                          {b.batchNumber}
+                          <div className="flex items-center gap-2">
+                            {b.batchNumber}
+                            {b.editHistory && b.editHistory.length > 0 && (
+                              <span
+                                className="text-xs font-medium px-1.5 py-0.5 rounded-full"
+                                style={{ backgroundColor: `${theme.colors.warning}20`, color: theme.colors.warning }}
+                                title={`Last updated: ${b.updatedAt ? moment(b.updatedAt).format('DD/MM/YYYY HH:mm') : '—'}`}
+                              >
+                                Edited · {b.updatedAt ? moment(b.updatedAt).format('DD/MM/YYYY') : '—'}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap" style={{ color: theme.colors.textSecondary }}>
                           {formatConditionsList(b.conditions)}
@@ -178,14 +192,24 @@ export default function ProductsUnderTesting() {
                           {formatDate(b.expiryDate)}
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <Button
-                            variant="ghost"
-                            onClick={() => navigate(`/product/${b._id}/report`)}
-                            className="flex items-center gap-2 cursor-pointer"
-                          >
-                            <Eye size={16} />
-                            View batch
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              onClick={() => setEditingId(b._id)}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <Pencil size={16} />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() => navigate(`/product/${b._id}/report`)}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <Eye size={16} />
+                              View batch
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -199,6 +223,7 @@ export default function ProductsUnderTesting() {
       </div>
 
       <ProductDetailModal product={selectedProduct} onClose={() => setSelectedId(null)} />
+      <EditProductModal key={editingId} product={editingProduct} onClose={() => setEditingId(null)} />
     </div>
   );
 }
