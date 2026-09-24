@@ -10,6 +10,9 @@ import { DatePickerInput } from '../common/DatePickerInput'
 import Pick from '../common/PickInput'
 import { Grid, Field } from '../common/FormLayout'
 import { packTypes, dosageForm, conditionsOptions } from '../../constants/product_options'
+import { SpecificationForm } from '../specifications/SpecificationForm'
+import { SpecificationList } from '../specifications/SpecificationList'
+import { Specification, SubmittedResult } from '../../constants/specifications'
 import { updateProduct } from '../../utils/api/products'
 import { queryKeys } from '../../constants/query_keys'
 
@@ -28,6 +31,9 @@ export interface EditableProduct {
   manufacturingDate?: string
   stabilityDate?: string
   expiryDate?: string
+  specifications?: Specification[]
+  tests?: { _id?: string; specificationIds?: string[] }[]
+  testsResults?: SubmittedResult[]
 }
 
 interface EditProductModalProps {
@@ -56,7 +62,16 @@ export function EditProductModal({ product, onClose }: EditProductModalProps) {
     manufacturingDate: toDate(product?.manufacturingDate),
     stabilityDate: toDate(product?.stabilityDate),
     expiryDate: toDate(product?.expiryDate),
+    specifications: product?.specifications || [],
   }))
+
+  // Specs with recorded results can't be removed — results are keyed by
+  // testName, so dropping the spec would orphan them.
+  const specsWithResults = new Set(
+    (product?.specifications || [])
+      .filter(spec => (product?.testsResults || []).some(r => r[spec.testName] !== undefined))
+      .map(spec => spec.id)
+  )
 
   const updateMutation = useMutation({
     mutationFn: (updates: object) => updateProduct(product!._id, updates),
@@ -71,7 +86,18 @@ export function EditProductModal({ product, onClose }: EditProductModalProps) {
   if (!product) return null
 
   const handleSave = () => {
-    updateMutation.mutate(form)
+    const originalIds = new Set((product.specifications || []).map(s => s.id))
+    const addedIds = form.specifications.filter(s => !originalIds.has(s.id)).map(s => s.id)
+    const keptIds = new Set(form.specifications.map(s => s.id))
+    const doneTestIds = new Set((product.testsResults || []).map(r => r.testId))
+    // Only tests without submitted results pick up spec changes; completed
+    // tests keep the spec list they were run against.
+    const tests = product.tests?.map(t =>
+      doneTestIds.has(t._id!) || !t.specificationIds
+        ? t
+        : { ...t, specificationIds: [...t.specificationIds.filter(id => keptIds.has(id)), ...addedIds] }
+    )
+    updateMutation.mutate(tests ? { ...form, tests } : form)
   }
 
   return (
@@ -138,6 +164,20 @@ export function EditProductModal({ product, onClose }: EditProductModalProps) {
             <DatePickerInput label="" value={form.expiryDate} onChange={d => setForm(f => ({ ...f, expiryDate: d }))} />
           </Field>
         </Grid>
+
+        <div className="space-y-4">
+          <SpecificationList
+            specifications={form.specifications}
+            onRemove={id => {
+              if (specsWithResults.has(id)) {
+                showError('This specification already has recorded results and cannot be removed.')
+                return
+              }
+              setForm(f => ({ ...f, specifications: f.specifications.filter(s => s.id !== id) }))
+            }}
+          />
+          <SpecificationForm onAdd={spec => setForm(f => ({ ...f, specifications: [...f.specifications, spec] }))} />
+        </div>
 
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="ghost" onClick={onClose} disabled={updateMutation.isPending}>Cancel</Button>

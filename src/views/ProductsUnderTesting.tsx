@@ -11,15 +11,12 @@ import { Card } from '../components/common/Card';
 import { ProductDetailModal } from '../components/products/ProductDetailModal';
 import { EditProductModal, EditableProduct } from '../components/products/EditProductModal';
 import { formatConditionsList } from '../constants/stability_conditions';
-import { Specification } from '../constants/specifications';
 import { getProducts } from '../utils/api/products';
 import { queryKeys } from '../constants/query_keys';
 import ROUTE_PATHS from '../constants/route_paths';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 interface Product extends EditableProduct {
-  specifications?: Specification[];
-  testsResults?: { createdAt?: string }[];
   editHistory?: { editedAt: string }[];
   updatedAt?: string;
 }
